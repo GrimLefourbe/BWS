@@ -22,14 +22,14 @@ if 1:
     else:
         print("{} doesn't exist!".format(inifile))
 
-if 0:
+if 1:
     for filename in archives:
         if os.path.exists(filename):
             os.remove(filename)
-if 0:
+if 1:
     for url, filename in zip(urls,archives):
         DL.DownloadFile(url,filename)
-if 0:
+if 1:
     for i in archives:
         if os.path.exists(i):
             t = timeit.timeit("UNZIP.Check_Archive('{}')".format(i),setup="import UNZIP", number=10)

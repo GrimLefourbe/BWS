@@ -13,7 +13,5 @@ pat=re.compile("\[(?P<ID>.*?)\]"
 
 def LoadMods(filename):
     with open(filename) as file:
-        data= file.read()
-        print(len(data))
-        ModsData = pat.findall(data)
+        ModsData = pat.findall(file.read())
     return ModsData
