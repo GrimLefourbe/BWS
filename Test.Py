@@ -19,22 +19,35 @@ if 1:
         print('Loading {} : {}'.format(inifile, t))
         ModList = ModRead.LoadMods(inifile)
         print('{} mods loaded'.format(len(ModList)))
+
+        ModsToTest = [(i[5],i[6]) for i in ModList[10:30]]
     else:
         print("{} doesn't exist!".format(inifile))
+        ModsToTest = zip(urls, archives)
+else:
+    ModsToTest=zip(urls,archives)
 
 if 1:
-    for filename in archives:
-        if os.path.exists(filename):
-            os.remove(filename)
+    for url, filename in ModsToTest:
+        if url == "Manual" or filename == "Manual":
+            continue
+        fln = 'Downloads/' + filename
+        if os.path.exists(fln):
+            os.remove(fln)
 if 1:
-    for url, filename in zip(urls,archives):
-        DL.DownloadFile(url,filename)
+    for url, filename in ModsToTest:
+        if url == "Manual" or filename == "Manual":
+            continue
+        DL.DownloadFile(url.rstrip('/'),'Downloads/' + filename)
 if 1:
-    for i in archives:
-        if os.path.exists(i):
-            t = timeit.timeit("UNZIP.Check_Archive('{}')".format(i),setup="import UNZIP", number=10)
-            print(i + ':' + str(t))
+    for url, filename in ModsToTest:
+        if url == "Manual" or filename == "Manual":
+            continue
+        fln = 'Downloads/' + filename
+        if os.path.exists(fln):
+            t = timeit.timeit("UNZIP.Check_Archive('{}')".format(fln), setup="import UNZIP", number=10)
+            print(filename + ':' + str(t))
         else:
-            print("{} doesn't exist!".format(i))
+            print("{} doesn't exist!".format(filename))
 
 print("All is good!")
