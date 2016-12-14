@@ -3,11 +3,6 @@ os.chdir("C:\\Coding\\Python workshop\\BWS")
 
 import subprocess
 
-archive_to_ext = "amber-v4.exe"
-archive_to_ext = "Scales_of_Balance-master.zip"
-dirname = "amber-v4"
-dirname = "Scales_of_Balance-mastertmp"
-
 extracting_tools = ["C:\\Games\\BWS\\BigWorldSetup-bigworldsetup-2148d38ef306\\BiG World Setup\\Tools\\7z.exe","7z1604-extra\\7za.exe"]
 
 import re
@@ -59,7 +54,4 @@ def Extract_Archive(filename,targetdir=None):
         raise
 
     return res
-        
-if __name__ == '__main__':
-    #Extract_Archive(archive_to_ext, dirname)
-    s=Check_Archive(archive_to_ext)
+
