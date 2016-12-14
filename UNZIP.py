@@ -9,7 +9,7 @@ extracting_tools = ["Tools\\7z.exe",
 
 import re
 
-CheckPat = re.compile("(Everything is Ok)|(?P<fieldname>\w+): *(?P<value>\d+)\r")
+CheckPat = re.compile(b"(Everything is Ok)|(?P<fieldname>\w+): *(?P<value>\d+)\r")
 
 
 def Check_Archive(filename, ext_tool=None):
@@ -25,17 +25,18 @@ def Check_Archive(filename, ext_tool=None):
     except subprocess.CalledProcessError:
         print("CalledProcessError")
         raise
-    res = res.decode()
+
+
     s = CheckPat.findall(res)
 
     # Checks if Everything is Ok
-    if 'Everything is Ok' not in s[0]:
+    if b'Everything is Ok' not in s[0]:
         print("Erreur")
         print(s)
         return
 
     # Put the results into a more usable format
-    resdict = {i[1]: int(i[2]) for i in s[1:]}
+    resdict = {i[1].decode(): int(i[2]) for i in s[1:]}
     return resdict
 
 
