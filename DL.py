@@ -13,10 +13,10 @@ def DownloadFile(url, filename=None, reporthook=None):
             if ln:
                 ln=int(ln)
                 def reporthook(n):
-                    print('{}% complete'.format(100*n/ln))
+                    print('{:.2f}% complete'.format(100*n/ln))
             else:
                 def reporthook(n):
-                    print('{} bytes downloaded'.format(n))
+                    print('{:.0f} kb downloaded'.format(n/1000))
         downloaded = 0
         while 1:
             chunk=response.read(16*1024)
