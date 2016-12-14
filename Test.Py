@@ -3,6 +3,7 @@ import UNZIP
 import DL
 import timeit
 import os
+import subprocess
 
 os.chdir("C:\\Coding\\Python workshop\\BWS")
 
@@ -20,7 +21,7 @@ if 1:
         ModList = ModRead.LoadMods(inifile)
         print('{} mods loaded'.format(len(ModList)))
 
-        ModsToTest = [(i[5],i[6]) for i in ModList[10:30]]
+        ModsToTest = [(i[6],i[7]) for i in ModList[150:175]]
     else:
         print("{} doesn't exist!".format(inifile))
         ModsToTest = zip(urls, archives)
@@ -33,21 +34,34 @@ if 1:
             continue
         fln = 'Downloads/' + filename
         if os.path.exists(fln):
-            os.remove(fln)
+            try:
+                os.remove(fln)
+            except PermissionError:
+                print(ModsToTest, url, filename, fln)
+                raise
+
 if 1:
     for url, filename in ModsToTest:
         if url == "Manual" or filename == "Manual":
             continue
         DL.DownloadFile(url.rstrip('/'),'Downloads/' + filename)
 if 1:
+    errors = []
     for url, filename in ModsToTest:
         if url == "Manual" or filename == "Manual":
             continue
         fln = 'Downloads/' + filename
         if os.path.exists(fln):
-            t = timeit.timeit("UNZIP.Check_Archive('{}')".format(fln), setup="import UNZIP", number=10)
-            print(filename + ':' + str(t))
+            try:
+                t = timeit.timeit("UNZIP.Check_Archive('{}')".format(fln), setup="import UNZIP", number=1)
+                print(filename + ':' + str(t))
+            except subprocess.CalledProcessError:
+                errors.append((url, filename))
+                print("Error with {}".format(filename))
+                continue
         else:
             print("{} doesn't exist!".format(filename))
 
-print("All is good!")
+print('Those failed :(')
+print(errors)
+print("All the rest is good!")
