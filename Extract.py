@@ -1,5 +1,6 @@
 import os
 import subprocess
+import traceback
 
 extracting_tools = ["Tools\\7z.exe",
                     "7z1604-extra\\7za.exe"]
@@ -8,8 +9,7 @@ import re
 
 CheckPat = re.compile(b"(Everything is Ok)|(?P<fieldname>\w+): *(?P<value>\d+)\r")
 
-
-def Check_Archive(filename, ext_tool=None):
+def Check_Archive(filename, ext_tool=None, exc_file=None):
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
@@ -17,13 +17,7 @@ def Check_Archive(filename, ext_tool=None):
         ext_tool = SelectTool(filename)
 
     # uses the 7z-like extraction tool to check the validity of the archive and its contents
-    try:
-        res = subprocess.check_output([ext_tool, 't', filename], startupinfo=startupinfo)
-    except subprocess.CalledProcessError:
-        print("CalledProcessError")
-        raise
-
-
+    res = subprocess.check_output([ext_tool, 't', filename], startupinfo=startupinfo)
 
     s = CheckPat.findall(res)
 

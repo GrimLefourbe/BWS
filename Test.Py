@@ -1,9 +1,10 @@
-import ModRead
-import UNZIP
-import DL
+import ModInfo
+import Extract
+import Rename
 import timeit
 import os
 import subprocess
+import traceback
 
 os.chdir("C:\\Coding\\Python workshop\\BWS")
 
@@ -13,12 +14,12 @@ LogsLocation = "C:\\Coding\\Python workshop\\BWS\\Logs"
 
 inifile='ModBG2EE.ini'
 if os.path.exists(inifile):
-    t = timeit.timeit("ModRead.LoadMods('{}')".format(inifile), setup="import ModRead", number=10)
+    t = timeit.timeit("ModRead.ModList('{}')".format(inifile), setup="import ModRead", number=10)
     print('Loading {} : {}'.format(inifile, t))
-    ModDict = ModRead.LoadMods(inifile)
+    ModDict = ModInfo.ModList(inifile)
     print('{} mods loaded'.format(len(ModDict)))
 
-    ModsToTest = [(i['Down'],i['Save']) for i in ModDict]
+    ModsToTest = [(i['Down'],i['Save']) for i in ModDict[:20]]
 else:
     print("{} doesn't exist!".format(inifile))
     ModsToTest=[]
@@ -41,34 +42,33 @@ if 1:
         if url == "Manual" or filename == "Manual":
             continue
         try:
-            DL.DownloadFile(url.rstrip('/'),DownloadsLocation + '\\' + filename)
+            Rename.DownloadFile(url.rstrip('/'), DownloadsLocation + '\\' + filename)
         except:
-            print((url,filename), file=dlf)
+            traceback.print_exc(file=dlf)
 dlf.close()
 
 exterrorsf = open(LogsLocation +'\\' + 'extfailed.txt', 'a')
 if 1:
+    cwd = os.getcwd()
+    os.chdir(DownloadsLocation)
+    ModsData=[]
     for url, filename in ModsToTest:
         if url == "Manual" or filename == "Manual":
             continue
-        cwd = os.getcwd()
-        os.chdir(DownloadsLocation)
         if os.path.exists(filename):
             try:
-                UNZIP.Check_Archive(filename)
+                ModsData.append((filename, Extract.Check_Archive(filename, exc_file=exterrorsf)))
                 print("{} checked".format(filename))
 
-                t = timeit.timeit("UNZIP.Check_Archive('{}')".format(filename), setup="import UNZIP", number=1)
+                t = timeit.timeit("Extract.Check_Archive('{}')".format(filename), setup="import UNZIP", number=1)
                 print(filename + ':' + str(t))
 
             except subprocess.CalledProcessError:
-                print((url, filename), file=exterrorsf)
-                print("Error with {}".format(filename))
+                traceback.print_exc(file=exterrorsf)
                 continue
-            finally:
-                os.chdir(cwd)
+
         else:
             print("{} doesn't exist!".format(filename))
+    os.chdir(cwd)
 exterrorsf.close()
-print('Those failed :(')
-print("All the rest is good!")
+print("Work is done!")

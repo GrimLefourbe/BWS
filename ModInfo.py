@@ -12,7 +12,7 @@ pat=re.compile("\[(?P<ID>.*?)\]"
                "(?:\n *Tra=(?P<Tra>.*?))?"
                "(?:\n *Wiki=(?P<Wiki>.*?))?" "$", flags=re.MULTILINE)
 
-def LoadMods(filename):
+def ModList(filename):
     with open(filename) as file:
         ModsData = [match.groupdict() for match in pat.finditer(file.read())]
     return ModsData
