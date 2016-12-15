@@ -1,6 +1,6 @@
 import re
 
-pat=re.compile("\[(?P<ID>.*?)\]"
+ModListPat=re.compile("\[(?P<ID>.*?)\]"
                "(?:\n *Name=(?P<Name>.*?))?"
                "(?:\n *(?:(?:Rev=)|(?:Version=))(?P<Rev>.*?))?"
                "(?:\n *Type=(?P<Type>.*?))?"
@@ -14,5 +14,5 @@ pat=re.compile("\[(?P<ID>.*?)\]"
 
 def ModList(filename):
     with open(filename) as file:
-        ModsData = [match.groupdict() for match in pat.finditer(file.read())]
+        ModsData = [match.groupdict() for match in ModListPat.finditer(file.read())]
     return ModsData

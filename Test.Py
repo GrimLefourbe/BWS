@@ -1,6 +1,6 @@
 import ModInfo
 import Extract
-import Rename
+import Net
 import timeit
 import os
 import subprocess
@@ -14,12 +14,12 @@ LogsLocation = "C:\\Coding\\Python workshop\\BWS\\Logs"
 
 inifile='ModBG2EE.ini'
 if os.path.exists(inifile):
-    t = timeit.timeit("ModRead.ModList('{}')".format(inifile), setup="import ModRead", number=10)
+    t = timeit.timeit("ModInfo.ModList('{}')".format(inifile), setup="import ModInfo", number=10)
     print('Loading {} : {}'.format(inifile, t))
     ModDict = ModInfo.ModList(inifile)
     print('{} mods loaded'.format(len(ModDict)))
 
-    ModsToTest = [(i['Down'],i['Save']) for i in ModDict[:20]]
+    ModsToTest = [(i['Down'],i['Save']) for i in ModDict[160:200]]
 else:
     print("{} doesn't exist!".format(inifile))
     ModsToTest=[]
@@ -42,7 +42,7 @@ if 1:
         if url == "Manual" or filename == "Manual":
             continue
         try:
-            Rename.DownloadFile(url.rstrip('/'), DownloadsLocation + '\\' + filename)
+            Net.DownloadFile(url.rstrip('/'), DownloadsLocation + '\\' + filename)
         except:
             traceback.print_exc(file=dlf)
 dlf.close()
@@ -60,7 +60,7 @@ if 1:
                 ModsData.append((filename, Extract.Check_Archive(filename, exc_file=exterrorsf)))
                 print("{} checked".format(filename))
 
-                t = timeit.timeit("Extract.Check_Archive('{}')".format(filename), setup="import UNZIP", number=1)
+                t = timeit.timeit("Extract.Check_Archive('{}')".format(filename), setup="import Extract", number=1)
                 print(filename + ':' + str(t))
 
             except subprocess.CalledProcessError:
