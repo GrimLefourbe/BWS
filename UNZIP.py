@@ -1,7 +1,4 @@
 import os
-
-os.chdir("C:\\Coding\\Python workshop\\BWS")
-
 import subprocess
 
 extracting_tools = ["Tools\\7z.exe",
@@ -27,6 +24,7 @@ def Check_Archive(filename, ext_tool=None):
         raise
 
 
+
     s = CheckPat.findall(res)
 
     # Checks if Everything is Ok
@@ -42,7 +40,7 @@ def Check_Archive(filename, ext_tool=None):
 
 # noinspection PyUnusedLocal
 def SelectTool(filename):
-    return extracting_tools[0]
+    return 'C:\\Coding\\Python workshop\\BWS\\' + extracting_tools[0]
 
 
 def Extract_Archive(filename, targetdir=None):

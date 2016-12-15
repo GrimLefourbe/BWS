@@ -7,61 +7,68 @@ import subprocess
 
 os.chdir("C:\\Coding\\Python workshop\\BWS")
 
-urls = ['http://gibberlings3.net/forums/index.php?app=downloads&module=display&section=download&do=confirm_download&id=685',
-        'https://github.com/subtledoctor/Scales_of_Balance/archive/master.zip',
-        'http://lynxlynx.info/ie/modhub.php?CrevsDaak/7C-Yoshi&pre',
-        'http://www.shsforums.net/files/download/1007-adrian']
-archives = ["amber-v4.exe", "Scales_of_Balance-master.zip", '7C-Yoshi-latest.zip', 'adrian_v3.1.rar']
+DownloadsLocation = "E:\\Coding\\BWS-Downloads"
+LogsLocation = "C:\\Coding\\Python workshop\\BWS\\Logs"
 
-if 1:
-    inifile='Mod.ini'
-    if os.path.exists(inifile):
-        t = timeit.timeit("ModRead.LoadMods('{}')".format(inifile), setup="import ModRead", number=10)
-        print('Loading {} : {}'.format(inifile, t))
-        ModList = ModRead.LoadMods(inifile)
-        print('{} mods loaded'.format(len(ModList)))
 
-        ModsToTest = [(i[6],i[7]) for i in ModList[150:175]]
-    else:
-        print("{} doesn't exist!".format(inifile))
-        ModsToTest = zip(urls, archives)
+inifile='ModBG2EE.ini'
+if os.path.exists(inifile):
+    t = timeit.timeit("ModRead.LoadMods('{}')".format(inifile), setup="import ModRead", number=10)
+    print('Loading {} : {}'.format(inifile, t))
+    ModDict = ModRead.LoadMods(inifile)
+    print('{} mods loaded'.format(len(ModDict)))
+
+    ModsToTest = [(i['Down'],i['Save']) for i in ModDict]
 else:
-    ModsToTest=zip(urls,archives)
+    print("{} doesn't exist!".format(inifile))
+    ModsToTest=[]
 
 if 1:
     for url, filename in ModsToTest:
         if url == "Manual" or filename == "Manual":
             continue
-        fln = 'Downloads/' + filename
-        if os.path.exists(fln):
+        filename = DownloadsLocation + '\\' + filename
+        if os.path.exists(filename):
             try:
-                os.remove(fln)
+                os.remove(filename)
             except PermissionError:
-                print(ModsToTest, url, filename, fln)
+                print(ModsToTest, url, filename, filename)
                 raise
 
+dlf = open(LogsLocation + '\\' + 'dlfailed.txt', 'a')
 if 1:
     for url, filename in ModsToTest:
         if url == "Manual" or filename == "Manual":
             continue
-        DL.DownloadFile(url.rstrip('/'),'Downloads/' + filename)
+        try:
+            DL.DownloadFile(url.rstrip('/'),DownloadsLocation + '\\' + filename)
+        except:
+            print((url,filename), file=dlf)
+dlf.close()
+
+exterrorsf = open(LogsLocation +'\\' + 'extfailed.txt', 'a')
 if 1:
-    errors = []
     for url, filename in ModsToTest:
         if url == "Manual" or filename == "Manual":
             continue
-        fln = 'Downloads/' + filename
-        if os.path.exists(fln):
+        cwd = os.getcwd()
+        os.chdir(DownloadsLocation)
+        if os.path.exists(filename):
             try:
-                t = timeit.timeit("UNZIP.Check_Archive('{}')".format(fln), setup="import UNZIP", number=1)
+                UNZIP.Check_Archive(filename)
+                print("{} checked".format(filename))
+
+                t = timeit.timeit("UNZIP.Check_Archive('{}')".format(filename), setup="import UNZIP", number=1)
                 print(filename + ':' + str(t))
+
             except subprocess.CalledProcessError:
-                errors.append((url, filename))
+                print((url, filename), file=exterrorsf)
                 print("Error with {}".format(filename))
                 continue
+            finally:
+                os.chdir(cwd)
         else:
             print("{} doesn't exist!".format(filename))
-
+exterrorsf.close()
 print('Those failed :(')
-print(errors)
 print("All the rest is good!")
