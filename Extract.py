@@ -9,7 +9,7 @@ import re
 
 CheckPat = re.compile(b"(Everything is Ok)|(?P<fieldname>\w+): *(?P<value>\d+)\r")
 
-def Check_Archive(filename, ext_tool=None, exc_file=None):
+def Check_Archive(filename, ext_tool=None):
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 

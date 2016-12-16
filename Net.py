@@ -1,13 +1,13 @@
 import urllib.request
+import urllib.error
+import logging
 
 def DownloadFile(url, filename=None, reporthook=None):
-    print("Starting download of {} to {}".format(url, filename))
+    logging.info('Sending request to {}'.format(url))
     with urllib.request.urlopen(url) as response, open(filename, 'wb') as out_file:
         #In case download isn't possible
         if response.code !=200:
-            print("Error in {}".format(url))
-            print(response.code)
-            return 0
+            return response.code, 0
         if reporthook==None:
             #Temp solution while no GUI
             ln = response.getheader('Content-length')
@@ -29,10 +29,9 @@ def DownloadFile(url, filename=None, reporthook=None):
             downloaded += len(chunk)
             out_file.write(chunk)
             reporthook(downloaded)
+        logging.info('Done downloading from {} to {}, {} bytes downloaded'.format(url,filename,downloaded))
 
-    print("\nDownload finished for {}, {} bytes downloaded".format(filename, downloaded))
-
-    return 1
+    return response.code, downloaded
 
 
 if __name__ == '__main__':
