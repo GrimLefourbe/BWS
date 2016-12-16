@@ -77,6 +77,7 @@ import BWS
 
 if __name__ == '__main__':
     T=BWS.BWS(dldir='E:\\Coding\\BWS-Downloads')
+    i,j=10,30
     T.LoadModsData('ModBG2EE.ini')
-    T.DownloadMods(T.ModsData[:10])
-    T.TestMods(T.ModsData[:10])
+    T.DownloadMods(T.ModsData[i:j])
+    T.TestMods(T.ModsData[i:j])

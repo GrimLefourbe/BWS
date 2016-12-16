@@ -1,7 +1,26 @@
 import os
 import subprocess
-import traceback
-
+import logging
+'''
+ext_tools['bar']['foo'] is a list of tuples with a command used to extract files of extension .foo on the platform bar and a command used to test integrity of files
+ext_tools['bar']['foo'][i][0] is used to extract, ext_tools['bar']['foo'][i][1] is used to test.
+'''
+ext_tools = {'win32': {'exe': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
+                       'rar': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
+                       'zip': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
+                       '7z' : [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")]},
+             'darwin': {'exe': [],
+                        'rar': [],
+                        'zip': [("unzip -o {filename}","unzip -to {filename}")],
+                        '7z' : []},
+             'linux': {'exe': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
+                       'rar': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
+                       'zip': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
+                       '7z': []},
+             'linux2': {'exe': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
+                        'rar': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
+                        'zip': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
+                        '7z' : []}}
 extracting_tools = ["Tools\\7z.exe",
                     "7z1604-extra\\7za.exe"]
 
@@ -9,38 +28,54 @@ import re
 
 CheckPat = re.compile(b"(Everything is Ok)|(?P<fieldname>\w+): *(?P<value>\d+)\r")
 
-def Check_Archive(filename, ext_tool=None):
+def Check_Archive(filepath, basedir='', ext_tool=None,):
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
     if ext_tool is None:
-        ext_tool = SelectTool(filename)
+        ext_tool = SelectTool(filepath)
 
+    logging.info('Selected ext_tool is {}'.format(ext_tool))
+    command = ext_tool[1].format(filename=filepath,basedir=basedir)
+    logging.info('Command is {}'.format(command))
     # uses the 7z-like extraction tool to check the validity of the archive and its contents
-    res = subprocess.check_output([ext_tool, 't', filename], startupinfo=startupinfo)
+    res = subprocess.check_output(command, startupinfo=startupinfo)
+
+    logging.info('ext_tool executed without error')
 
     s = CheckPat.findall(res)
 
     # Checks if Everything is Ok
     if b'Everything is Ok' not in s[0]:
-        print("Erreur")
-        print(s)
-        return
-
+        logging.debug('ext_tool found an issue.\n'
+                      's={}\n'
+                      'ext_tool output :\n{}'.format(s,res))
+        return 3
+    logging.info('Testing was successful for {}'.format(filepath))
+    return 1
     # Put the results into a more usable format
-    resdict = {i[1].decode(): int(i[2]) for i in s[1:]}
-    return resdict
+    # resdict = {i[1].decode(): int(i[2]) for i in s[1:]}
+    # return resdict
 
 
 # noinspection PyUnusedLocal
 def SelectTool(filename):
+    from sys import platform
+    platform_tools = ext_tools[platform]
+    ext = filename.rsplit('.')[-1]
+    if ext in platform_tools:
+        return platform_tools[ext][0]
+
     return 'C:\\Coding\\Python workshop\\BWS\\' + extracting_tools[0]
 
 
-def Extract_Archive(filename, targetdir=None):
+def Extract_Archive(filename, targetdir=None, basedir='', ext_tool=None):
     if targetdir is None:
         targetdir = filename.rsplit(sep='.', maxsplit=1)
         os.mkdir(targetdir)
+
+    if ext_tool is None:
+        ext_tool = SelectTool(filename)
 
     # Stops the console window from popping
     startupinfo = subprocess.STARTUPINFO()

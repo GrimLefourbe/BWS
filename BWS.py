@@ -133,7 +133,11 @@ class BWS:
 
     def TestMods(self, ToTest, dldir=None):
         '''
-
+        -1:Manual
+        0:CalledProcessError
+        1:Success
+        2:File doesn't exist
+        3:Test found errors
         :param ToTest:
         :param dldir:
         :return:
@@ -148,24 +152,25 @@ class BWS:
         for i in ToTest:
             logging.info('Testing {} : {}'.format(i['ID'],i['Save']))
             filename = i['Save']
+            filepath = dldir + '\\' + filename
             if filename=="Manual":
                 results.append(-1)
-                logging.warning('Skipping {} : {}'.format(i['ID'],filename))
+                logging.warning('Skipping {} : {}'.format(i['ID'],filepath))
                 continue
 
-            if os.path.exists(filename):
+            if os.path.exists(filepath):
                 try:
-                    results.append(Extract.Check_Archive(filename))
+                    results.append(Extract.Check_Archive(filepath,basedir=self.dir))
                 except subprocess.CalledProcessError:
-                    logging.exception('Error in file {}'.format(filename))
-                    results.append(1)
+                    logging.exception('Error in file {}'.format(filepath))
+                    results.append(0)
                     continue
 
             else:
-                logging.warning("{} doesn't exist!".format(filename))
-                results.append(0)
+                logging.warning("{} doesn't exist!".format(filepath))
+                results.append(2)
                 continue
-            logging.info("{} : {} is fine".format(i['ID'], filename))
+            logging.info("{} : {} is fine".format(i['ID'], filepath))
         os.chdir(cwd)
         assert len(results)==len(ToTest)
         return results
