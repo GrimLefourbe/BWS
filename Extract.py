@@ -1,34 +1,37 @@
 import os
 import subprocess
 import logging
+
 '''
 ext_tools['bar']['foo'] is a list of tuples with a command used to extract files of extension .foo on the platform bar and a command used to test integrity of files
 ext_tools['bar']['foo'][i][0] is used to extract, ext_tools['bar']['foo'][i][1] is used to test.
 '''
-ext_tools = {'win32': {'exe': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
-                       'rar': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
-                       'zip': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
-                       '7z' : [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")]},
-             'darwin': {'exe': [],
-                        'rar': [],
-                        'zip': [("unzip -o {filename}","unzip -to {filename}")],
-                        '7z' : []},
-             'linux': {'exe': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
-                       'rar': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
-                       'zip': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
-                       '7z': []},
-             'linux2': {'exe': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
-                        'rar': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
-                        'zip': [("{basedir}\\Tools\\7z.exe x {filename}", "{basedir}\\Tools\\7z.exe t {filename}")],
-                        '7z' : []}}
-extracting_tools = ["Tools\\7z.exe",
-                    "7z1604-extra\\7za.exe"]
+ext_tools = {
+    'win32': {'exe': [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")],
+              'rar': [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")],
+              'zip': [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")],
+              '7z' : [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")]},
+    'darwin': {'exe': [],
+               'rar': [],
+               'zip': [("unzip -o {filename}", "unzip -to {filename}")],
+               '7z': []},
+    'linux': {
+        'exe': [("{basedir}\\Tools\\7z.exe x {filename -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")],
+        'rar': [],
+        'zip': [("{basedir}\\Tools\\7z.exe x {filename -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")],
+        '7z' : [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")]},
+    'linux2': {
+        'exe': [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")],
+        'rar': [],
+        'zip': [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")],
+        '7z' : [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")]}}
 
 import re
 
 CheckPat = re.compile(b"(Everything is Ok)|(?P<fieldname>\w+): *(?P<value>\d+)\r")
 
-def Check_Archive(filepath, basedir='', ext_tool=None,):
+
+def Check_Archive(filepath, basedir='', ext_tool=None, ):
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
@@ -36,7 +39,7 @@ def Check_Archive(filepath, basedir='', ext_tool=None,):
         ext_tool = SelectTool(filepath)
 
     logging.info('Selected ext_tool is {}'.format(ext_tool))
-    command = ext_tool[1].format(filename=filepath,basedir=basedir)
+    command = ext_tool[1].format(filename=filepath, basedir=basedir)
     logging.info('Command is {}'.format(command))
     # uses the 7z-like extraction tool to check the validity of the archive and its contents
     res = subprocess.check_output(command, startupinfo=startupinfo)
@@ -49,16 +52,14 @@ def Check_Archive(filepath, basedir='', ext_tool=None,):
     if b'Everything is Ok' not in s[0]:
         logging.debug('ext_tool found an issue.\n'
                       's={}\n'
-                      'ext_tool output :\n{}'.format(s,res))
+                      'ext_tool output :\n{}'.format(s, res))
         return 3
     logging.info('Testing was successful for {}'.format(filepath))
     return 1
     # Put the results into a more usable format
-    # resdict = {i[1].decode(): int(i[2]) for i in s[1:]}
-    # return resdict
 
 
-# noinspection PyUnusedLocal
+
 def SelectTool(filename):
     from sys import platform
     platform_tools = ext_tools[platform]
@@ -66,27 +67,36 @@ def SelectTool(filename):
     if ext in platform_tools:
         return platform_tools[ext][0]
 
-    return 'C:\\Coding\\Python workshop\\BWS\\' + extracting_tools[0]
 
-
-def Extract_Archive(filename, targetdir=None, basedir='', ext_tool=None):
+def Extract_Archive(filepath, targetdir=None, basedir='', ext_tool=None):
     if targetdir is None:
-        targetdir = filename.rsplit(sep='.', maxsplit=1)
-        os.mkdir(targetdir)
+        targetdir = filepath.rsplit(sep='.', maxsplit=1)
+        os.makedirs(targetdir, exist_ok=True)
 
     if ext_tool is None:
-        ext_tool = SelectTool(filename)
+        ext_tool = SelectTool(filepath)
 
     # Stops the console window from popping
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
-    ext_tool = SelectTool(filename)
+    ext_tool = SelectTool(filepath)
 
-    try:
-        res = subprocess.check_output([ext_tool, "x", filename, "-o" + targetdir], startupinfo=startupinfo)
-    except subprocess.CalledProcessError:
-        print("CalledProcessError")
-        raise
+    logging.info('Selected ext_tool is {}'.format(ext_tool))
+    command = ext_tool[0].format(filename=filepath, basedir=basedir, targetdir=targetdir)
+    logging.info('Command is {}'.format(command))
+    # uses the 7z-like extraction tool to check the validity of the archive and its contents
+    res = subprocess.check_output(command, startupinfo=startupinfo)
 
-    return res
+    logging.info('ext_tool executed without error')
+
+    s = CheckPat.findall(res)
+
+    # Checks if Everything is Ok
+    if b'Everything is Ok' not in s[0]:
+        logging.debug('ext_tool found an issue.\n'
+                      's={}\n'
+                      'ext_tool output :\n{}'.format(s, res))
+        return 3
+    logging.info('Testing was successful for {}'.format(filepath))
+    return 1

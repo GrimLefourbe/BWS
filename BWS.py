@@ -175,5 +175,48 @@ class BWS:
         assert len(results)==len(ToTest)
         return results
 
+    def ExtractMods(self, ToExt, dldir=None, targetdir=None):
+        '''
+        -1:Manual
+        0:CalledProcessError
+        1:Success
+        2:File doesn't exist
+        3:Test found errors
+        :param ToExt:
+        :param dldir:
+        :return:
+        '''
+        if dldir is None:
+            dldir = self.dldir
+        if targetdir is None:
+            targetdir = self.dir + '\Extracted'
+
+        results = []
+        for i in ToExt:
+            logging.info('Extracting {} : {}'.format(i['ID'],i['Save']))
+            filename = i['Save']
+            filepath = dldir + '\\' + filename
+            if filename == "Manual":
+                results.append(-1)
+                logging.warning('Skipping {} : {}'.format(i['ID'],filepath))
+                continue
+
+            if os.path.exists(filepath):
+                try:
+                    results.append(Extract.Extract_Archive(filepath, targetdir=targetdir, basedir=self.dir))
+                except subprocess.CalledProcessError:
+                    logging.exception('Error in file {}'.format(filepath))
+                    results.append(0)
+                    continue
+
+            else:
+                logging.warning("{} doesn't exist!".format(filepath))
+                results.append(2)
+                continue
+            logging.info("{} : {} is fine".format(i['ID'], filepath))
+
+        assert len(results)==len(ToExt)
+        return results
+
 
 
