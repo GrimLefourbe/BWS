@@ -4,7 +4,7 @@ import Net
 import os
 import sys
 import time
-import traceback
+import re
 import logging
 import subprocess
 
@@ -46,6 +46,8 @@ class BWS:
 
         self.ModsData = []
 
+        self.TestPatTp2 = re.compile(rb'(?:\S+\\)?[sS][eE][tT][uU][pP]-(.*?)\.tp2')
+        self.TestPatFdr = re.compile(rb'(\S+\\)*()')
 
     def LoadModsData(self, inifile=None):
         if inifile is None:
@@ -160,11 +162,17 @@ class BWS:
 
             if os.path.exists(filepath):
                 try:
-                    results.append(Extract.Check_Archive(filepath,basedir=self.dir))
+                    res=Extract.Check_Archive(filepath,basedir=self.dir)
                 except subprocess.CalledProcessError:
                     logging.exception('Error in file {}'.format(filepath))
                     results.append(0)
                     continue
+                else:
+                    assert isinstance(res, bytes)
+                    tp2 = self.TestPatTp2.search(res)
+                    TestPatFdr = re.compile('(\S+\\)*({}\\)'.format(tp2.group(1)))
+                    folder = self.TestPatFdr.search(res)
+                    fnumber = len(folder.groups())-2
 
             else:
                 logging.warning("{} doesn't exist!".format(filepath))

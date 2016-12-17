@@ -31,9 +31,23 @@ import re
 CheckPat = re.compile(b"(Everything is Ok)|(?P<fieldname>\w+): *(?P<value>\d+)\r")
 
 
-def Check_Archive(filepath, basedir='', ext_tool=None, ):
+def Check_Archive(filepath, basedir='', regex = None,ext_tool=None):
+    '''
+    Checks the integrity of the contents of filepath
+    basedir is used to find the path of the ext_tool
+    ext_tool can be used to override the defaults ext_tool, it should be
+    [command to use to extract archive, command to use to test archive].
+    The command will be affected by format(filename=filepath, basedir=basedir)
+    :param filepath:
+    :param basedir:
+    :param ext_tool:
+    :return:
+    '''
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+    if regex is None:
+        regex = []
 
     if ext_tool is None:
         ext_tool = SelectTool(filepath)
@@ -46,6 +60,9 @@ def Check_Archive(filepath, basedir='', ext_tool=None, ):
 
     logging.info('ext_tool executed without error')
 
+    for Pat in regex:
+        Pat.search(res)
+
     s = CheckPat.findall(res)
 
     # Checks if Everything is Ok
@@ -55,8 +72,9 @@ def Check_Archive(filepath, basedir='', ext_tool=None, ):
                       'ext_tool output :\n{}'.format(s, res))
         return 3
     logging.info('Testing was successful for {}'.format(filepath))
-    return 1
-    # Put the results into a more usable format
+
+    return res
+
 
 
 
@@ -66,7 +84,6 @@ def SelectTool(filename):
     ext = filename.rsplit('.')[-1]
     if ext in platform_tools:
         return platform_tools[ext][0]
-
 
 def Extract_Archive(filepath, targetdir=None, basedir='', ext_tool=None):
     if targetdir is None:
