@@ -7,10 +7,10 @@ ext_tools['bar']['foo'] is a list of tuples with a command used to extract files
 ext_tools['bar']['foo'][i][0] is used to extract, ext_tools['bar']['foo'][i][1] is used to test.
 '''
 ext_tools = {
-    'win32': {'exe': [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")],
-              'rar': [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")],
-              'zip': [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")],
-              '7z' : [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")]},
+    'win32': {'exe': [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir} -aoa", "{basedir}\\Tools\\7z.exe t {filename}")],
+              'rar': [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir} -aoa", "{basedir}\\Tools\\7z.exe t {filename}")],
+              'zip': [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir} -aoa", "{basedir}\\Tools\\7z.exe t {filename}")],
+              '7z' : [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir} -aoa", "{basedir}\\Tools\\7z.exe t {filename}")]},
     'darwin': {'exe': [],
                'rar': [],
                'zip': [("unzip -o {filename}", "unzip -to {filename}")],
@@ -30,8 +30,32 @@ import re
 
 CheckPat = re.compile(b"(Everything is Ok)|(?P<fieldname>\w+): *(?P<value>\d+)\r")
 
+def RegexBytesSeq(Regstr, bstring : bytes, keywords = None):
+    '''
+    Regstr is a list of bytes strings representing regex patterns. Any keywords will be fed back to
+    the next elements.
+    bstring if os bytes type.
+    :param Regstr:
+    :return:
+    '''
 
-def Check_Archive(filepath, basedir='', regex = None,ext_tool=None):
+    if keywords is None:
+        keywords = {}
+    groups = []
+
+    for s in Regstr:
+        print(s%keywords)
+        match = re.search(s%keywords, bstring)
+        if match:
+            print(match, match.groupdict())
+            groupdict = {k.encode(): v for k, v in match.groupdict().items()}
+            keywords.update(groupdict)
+            print(keywords)
+            groups.append(match.groups())
+
+    return groups
+
+def Check_Archive(filepath, basedir='', regex = None, ext_tool=None):
     '''
     Checks the integrity of the contents of filepath
     basedir is used to find the path of the ext_tool
@@ -59,9 +83,6 @@ def Check_Archive(filepath, basedir='', regex = None,ext_tool=None):
     res = subprocess.check_output(command, startupinfo=startupinfo)
 
     logging.info('ext_tool executed without error')
-
-    for Pat in regex:
-        Pat.search(res)
 
     s = CheckPat.findall(res)
 
