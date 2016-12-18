@@ -133,6 +133,92 @@ class BWS:
         logging.info('Download of {} files finished'.format(len(ToDl)))
         return results
 
+    def TestMod(self, filepath, basedir=None):
+        '''
+        Returns 0 if the test didn't complete
+        Returns 3 if the test found inconsistencies
+        else returns the a dict with containing the tp2 name(tpname) and the path to the main folder(foldpath) of the mod
+        :param basedir:
+        :return:
+        '''
+        if basedir is None:
+            basedir = self.dir
+
+        regexlist = [rb'(?:[^\r\n\t\f\v \\]+\\)*(?:[sS][eE][tT][uU][pP]-)?(?P<tpname>[^\r\n\t\f\v \\]*?)\.[Tt][Pp]2',
+                     rb'((?:[^\r\n\t\f\v \\]+?\\)*?)(%(tpname)s)(?=\r?$)(?m)']
+
+        res = Extract.Check_Archive(filepath,basedir=self.dir, regex=regexlist)
+
+        if isinstance(res, int):
+            return res
+        else:
+            return {'tpname': res[0][0], 'foldpath': res[1][0]}
+
+    def ExtractMod(self, filepath, basedir=None, targetdir=None):
+        '''
+        Returns 0 if the extraction didn't complete
+        Returns 1 if the extraction went well
+        Returns 3 if the extracting went bad
+
+        :param filepath:
+        :param basedir:
+        :param targetdir:
+        :return:
+        '''
+
+        if basedir is None:
+            basedir = self.dir
+
+        res = Extract.Extract_Archive(filepath, targetdir=targetdir, basedir=basedir)
+
+        return res
+
+    def ExtMods(self, ToExt, mode=0, dldir = None, targetdir=None, basedir=None):
+        '''
+        if mode is 1, tests integrity of archives and returns list of tp2 names as well as path to main folder
+        if mode is 0, extracts the archives to targetdir
+        :param ToExt:
+        :param dldir:
+        :param targetdir:
+        :param mode:
+        :return:
+        '''
+
+        txtdict = {0:['Extracting'], 1:['Testing']}
+        if dldir is None:
+            dldir = self.dldir
+        if basedir is None:
+            basedir = self.dir
+        if mode == 0 and targetdir is None:
+            targetdir = self.dir + '\Extracted'
+
+        results = []
+        for i in ToExt:
+            logging.info('{} {} : {}'.format(txtdict[mode], i['ID'],i['Save']))
+            filename = i['Save']
+
+            if filename=="Manual":
+                results.append(-1)
+                logging.warning('Skipping {} : {}'.format(i['ID'], filename))
+                continue
+            filepath = dldir +'\\' + filename
+            if os.path.exists(filepath):
+                if mode == 0:
+                    res = self.ExtractMod(self, filepath, targetdir=targetdir, basedir=basedir)
+                elif mode == 1:
+                    res = self.TestMod(filepath, basedir=basedir)
+                else:
+                    logging.ERROR('Unexpected argument for mode')
+                    return 0
+                results.append(res)
+            else:
+                logging.warning("{} doesn't exist!".format(filepath))
+                results.append(2)
+                continue
+            logging.info('{} went fine for {} : {}'.format(txtdict[mode][0], i['ID'], filename))
+        assert len(results) == len(ToExt)
+        return results
+
     def TestMods(self, ToTest, dldir=None):
         '''
         -1:Manual
@@ -147,9 +233,6 @@ class BWS:
         if dldir is None:
             dldir = self.dldir
 
-        cwd=os.getcwd()
-        os.chdir(dldir)
-
         results = []
         for i in ToTest:
             logging.info('Testing {} : {}'.format(i['ID'],i['Save']))
@@ -161,25 +244,24 @@ class BWS:
                 continue
 
             if os.path.exists(filepath):
-                try:
-                    res=Extract.Check_Archive(filepath,basedir=self.dir)
-                except subprocess.CalledProcessError:
-                    logging.exception('Error in file {}'.format(filepath))
-                    results.append(0)
-                    continue
-                else:
-                    assert isinstance(res, bytes)
-                    tp2 = self.TestPatTp2.search(res)
-                    TestPatFdr = re.compile('(\S+\\)*({}\\)'.format(tp2.group(1)))
-                    folder = self.TestPatFdr.search(res)
-                    fnumber = len(folder.groups())-2
+                regexlist = [rb'(?:[^\r\n\t\f\v \\]+\\)*(?:[sS][eE][tT][uU][pP]-)?(?P<tpname>[^\r\n\t\f\v \\]*?)\.[Tt][Pp]2',
+                             rb'((?:[^\r\n\t\f\v \\]+?\\)*?)(%(tpname)s)(?=\r?$)(?m)']
 
+                res=Extract.Check_Archive(filepath,basedir=self.dir, regex=regexlist)
+
+                if isinstance(res, int):
+                    if res==0:
+                        results.append(0) #Test failed
+                    elif res==3:
+                        results.append(3) #Test found inconsistency
+                else:
+                    results.append({'tpname':res[0][0],'foldpath':res[1][0]})
             else:
                 logging.warning("{} doesn't exist!".format(filepath))
                 results.append(2)
                 continue
             logging.info("{} : {} is fine".format(i['ID'], filepath))
-        os.chdir(cwd)
+
         assert len(results)==len(ToTest)
         return results
 

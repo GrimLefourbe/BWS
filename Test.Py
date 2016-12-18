@@ -76,15 +76,15 @@
 import BWS
 
 if __name__ == '__main__':
-    #T=BWS.BWS(dldir='E:\\Coding\\BWS-Downloads')
-    #i,j=0,100
-    #T.LoadModsData('ModBG2EE.ini')
-    #T.DownloadMods(T.ModsData[i:j])
-    #T.ExtractMods(T.ModsData[i:j],targetdir='E:\\Coding\\BWS-Extracts')
-    import Extract
-    t1=rb'(?:\S+\\)?[sS][eE][tT][uU][pP]-(?P<tpname>.*?)\.tp2'
-    t2=rb'((?:\S*?\\)*?)(%(tpname)s)(?=\r?$)(?m)'
-    f=open('tmp.txt','rb')
-    j=f.read()
-    f.close()
-    m=Extract.RegexBytesSeq([t1,t2],j)
+    T=BWS.BWS(dldir='E:\\Coding\\BWS-Downloads')
+    i,j=0,10
+    T.LoadModsData('ModBG2EE.ini')
+    m=T.DownloadMods(T.ModsData[i:j])
+    n=T.ExtMods(T.ModsData[i:j], mode = 1)
+    #import Extract
+    #t1=rb'(?:\S+\\)?[sS][eE][tT][uU][pP]-(?P<tpname>.*?)\.tp2'
+    #t2=rb'((?:\S*?\\)*?)(%(tpname)s)(?=\r?$)(?m)'
+    #f=open('tmp.txt','rb')
+    #j=f.read()
+    #f.close()
+    #m=Extract.RegexBytesSeq([t1,t2],j)

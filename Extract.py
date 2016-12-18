@@ -42,15 +42,13 @@ def RegexBytesSeq(Regstr, bstring : bytes, keywords = None):
     if keywords is None:
         keywords = {}
     groups = []
-
+    logging.info('Base keywords : {}'.format(keywords))
     for s in Regstr:
-        print(s%keywords)
+        logging.info('Current re is {}'.format(s))
         match = re.search(s%keywords, bstring)
         if match:
-            print(match, match.groupdict())
-            groupdict = {k.encode(): v for k, v in match.groupdict().items()}
-            keywords.update(groupdict)
-            print(keywords)
+            keywords.update({k.encode(): v for k, v in match.groupdict().items()})
+            logging.info('New keywords : {}'.format(keywords))
             groups.append(match.groups())
 
     return groups
@@ -62,6 +60,7 @@ def Check_Archive(filepath, basedir='', regex = None, ext_tool=None):
     ext_tool can be used to override the defaults ext_tool, it should be
     [command to use to extract archive, command to use to test archive].
     The command will be affected by format(filename=filepath, basedir=basedir)
+    Returns 3 if the extracting tool found an error, else returns the results of regex in a list or 1 if regex was not given.
     :param filepath:
     :param basedir:
     :param ext_tool:
@@ -70,8 +69,6 @@ def Check_Archive(filepath, basedir='', regex = None, ext_tool=None):
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
-    if regex is None:
-        regex = []
 
     if ext_tool is None:
         ext_tool = SelectTool(filepath)
@@ -79,9 +76,12 @@ def Check_Archive(filepath, basedir='', regex = None, ext_tool=None):
     logging.info('Selected ext_tool is {}'.format(ext_tool))
     command = ext_tool[1].format(filename=filepath, basedir=basedir)
     logging.info('Command is {}'.format(command))
-    # uses the 7z-like extraction tool to check the validity of the archive and its contents
-    res = subprocess.check_output(command, startupinfo=startupinfo)
-
+    # uses the extraction tool to check the validity of the archive and its contents
+    try:
+        res = subprocess.check_output(command, startupinfo=startupinfo)
+    except subprocess.CalledProcessError:
+        logging.exception('Returning 0 due to exception during the execution of {}'.format(command))
+        return 0
     logging.info('ext_tool executed without error')
 
     s = CheckPat.findall(res)
@@ -92,9 +92,15 @@ def Check_Archive(filepath, basedir='', regex = None, ext_tool=None):
                       's={}\n'
                       'ext_tool output :\n{}'.format(s, res))
         return 3
+
+    if regex is None:
+        results = 1
+    else:
+        results = RegexBytesSeq(regex, res)
+
     logging.info('Testing was successful for {}'.format(filepath))
 
-    return res
+    return results
 
 
 
@@ -123,8 +129,12 @@ def Extract_Archive(filepath, targetdir=None, basedir='', ext_tool=None):
     logging.info('Selected ext_tool is {}'.format(ext_tool))
     command = ext_tool[0].format(filename=filepath, basedir=basedir, targetdir=targetdir)
     logging.info('Command is {}'.format(command))
-    # uses the 7z-like extraction tool to check the validity of the archive and its contents
-    res = subprocess.check_output(command, startupinfo=startupinfo)
+    # uses the extraction tool to check the validity of the archive and its contents
+    try:
+        res = subprocess.check_output(command, startupinfo=startupinfo)
+    except subprocess.CalledProcessError:
+        logging.exception('Returning 0 due to exception during the execution of {}'.format(command))
+        return 0
 
     logging.info('ext_tool executed without error')
 
@@ -136,5 +146,7 @@ def Extract_Archive(filepath, targetdir=None, basedir='', ext_tool=None):
                       's={}\n'
                       'ext_tool output :\n{}'.format(s, res))
         return 3
+
     logging.info('Testing was successful for {}'.format(filepath))
+
     return 1
