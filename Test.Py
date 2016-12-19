@@ -76,11 +76,11 @@
 import BWS
 
 if __name__ == '__main__':
-    T=BWS.BWS(dldir='E:\\Coding\\BWS-Downloads')
-    i,j=0,10
-    T.LoadModsData('ModBG2EE.ini')
-    m=T.DownloadMods(T.ModsData[i:j])
-    n=T.ExtMods(T.ModsData[i:j], mode = 1)
+    T=BWS.BWS(dldir='E:\\Coding\\BWS-Downloads',end=10)
+    # i,j=0,250
+    # T.LoadModsData('ModBG2EE.ini')
+    # m=T.DownloadMods(T.ModsData[i:j])
+    # n=T.ExtMods(T.ModsData[i:j], mode = 1)
     #import Extract
     #t1=rb'(?:\S+\\)?[sS][eE][tT][uU][pP]-(?P<tpname>.*?)\.tp2'
     #t2=rb'((?:\S*?\\)*?)(%(tpname)s)(?=\r?$)(?m)'

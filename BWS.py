@@ -8,6 +8,20 @@ import re
 import logging
 import subprocess
 
+#Solaufein different folder name
+#Saradas_magic BG1.1 ??
+#Quayle_redonne pas de dossier sans \
+#PaintBG
+#NPCFlirt exe inside zip
+#LongerRoad different folder name
+#LaValygar comme Quayle
+#Keto comme NPCFlirt
+#item upgrade comme Solaufein
+#imp asylum comme Quayle
+#questpack comme Solaufein
+#Banter packs comme Quayle
+#Angelo comme Quayle (~)
+
 def loginit(logdir):
     '''
     Taken from Python Logging Cookbook
@@ -26,7 +40,7 @@ def loginit(logdir):
     logging.getLogger('').addHandler(console)
 
 class BWS:
-    def __init__(self, dir=None, dldir=None, logsdir=None):
+    def __init__(self, dir=None, dldir=None, logsdir=None, no_gui=True, config=None, start=0, end=-1):
         if dir is None:
             self.dir = sys.path[0]
         else:
@@ -40,15 +54,20 @@ class BWS:
             self.logsdir = self.dir + '\\Logs'
         else:
             self.logsdir = logsdir
+        if config is None:
+            self.config = self.dir + r'\Config'
+        else:
+            self.config = logsdir
+        os.makedirs(self.config, exist_ok=True)
         os.makedirs(self.dldir, exist_ok=True)
         os.makedirs(self.logsdir, exist_ok=True)
         loginit(self.logsdir)
-
+        logging.info('basedir is {}, dldir is {}, logsdir is {}'.format(self.dir,self.dldir, self.logsdir))
         self.ModsData = []
 
-        self.TestPatTp2 = re.compile(rb'(?:\S+\\)?[sS][eE][tT][uU][pP]-(.*?)\.tp2')
-        self.TestPatFdr = re.compile(rb'(\S+\\)*()')
-
+        if no_gui:
+            inifile=self.config + r'\BG2EE.ini'
+            self.No_GUI_loop(inifile, start=start, end=end)
     def LoadModsData(self, inifile=None):
         if inifile is None:
             inifile = self.dir + '\\Mod.ini'
@@ -133,7 +152,7 @@ class BWS:
         logging.info('Download of {} files finished'.format(len(ToDl)))
         return results
 
-    def TestMod(self, filepath, basedir=None):
+    def TestMod(self, filepath, modname, basedir=None):
         '''
         Returns 0 if the test didn't complete
         Returns 3 if the test found inconsistencies
@@ -144,15 +163,19 @@ class BWS:
         if basedir is None:
             basedir = self.dir
 
-        regexlist = [rb'(?:[^\r\n\t\f\v \\]+\\)*(?:[sS][eE][tT][uU][pP]-)?(?P<tpname>[^\r\n\t\f\v \\]*?)\.[Tt][Pp]2',
-                     rb'((?:[^\r\n\t\f\v \\]+?\\)*?)(%(tpname)s)(?=\r?$)(?m)']
+        #regexlist = [rb'(?:[^\r\n\t\f\v \\]+\\)*(?:[sS][eE][tT][uU][pP]-)?(?P<tpname>[^\r\n\t\f\v \\]*?)\.[Tt][Pp]2',
+        #             rb'((?:[^\r\n\t\f\v \\]+?\\)*?)(%(tpname)s)(?=\r?$)(?m)']
+        if isinstance(modname,str):
+            modname=modname.encode('ascii')
+        regexlist = [rb'((?:[^\r\n\t\f\v \\]+?\\)*?)(%s)(?:\\backup\r?$)?(?=\r?$)(?mi)' % modname]
 
         res = Extract.Check_Archive(filepath,basedir=self.dir, regex=regexlist)
 
+        logging.info('Check_Archive returned {}'.format(res))
         if isinstance(res, int):
             return res
         else:
-            return {'tpname': res[0][0], 'foldpath': res[1][0]}
+            return res
 
     def ExtractMod(self, filepath, basedir=None, targetdir=None):
         '''
@@ -194,7 +217,7 @@ class BWS:
 
         results = []
         for i in ToExt:
-            logging.info('{} {} : {}'.format(txtdict[mode], i['ID'],i['Save']))
+            logging.info('{} {} : {}'.format(txtdict[mode][0], i['ID'],i['Save']))
             filename = i['Save']
 
             if filename=="Manual":
@@ -206,7 +229,7 @@ class BWS:
                 if mode == 0:
                     res = self.ExtractMod(self, filepath, targetdir=targetdir, basedir=basedir)
                 elif mode == 1:
-                    res = self.TestMod(filepath, basedir=basedir)
+                    res = self.TestMod(filepath, modname=i['ID'], basedir=basedir)
                 else:
                     logging.ERROR('Unexpected argument for mode')
                     return 0
@@ -308,5 +331,11 @@ class BWS:
         assert len(results)==len(ToExt)
         return results
 
+    def No_GUI_loop(self, file, start=0, end=-1):
+        self.LoadModsData(file)
+        m=self.DownloadMods(self.ModsData[start:end] if end != -1 else self.ModsData)
+        n=self.ExtMods(self.ModsData[start:end] if end!=-1 else self.ModsData, mode= 1)
+
+        return m,n
 
 

@@ -7,24 +7,22 @@ ext_tools['bar']['foo'] is a list of tuples with a command used to extract files
 ext_tools['bar']['foo'][i][0] is used to extract, ext_tools['bar']['foo'][i][1] is used to test.
 '''
 ext_tools = {
-    'win32': {'exe': [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir} -aoa", "{basedir}\\Tools\\7z.exe t {filename}")],
-              'rar': [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir} -aoa", "{basedir}\\Tools\\7z.exe t {filename}")],
-              'zip': [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir} -aoa", "{basedir}\\Tools\\7z.exe t {filename}")],
-              '7z' : [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir} -aoa", "{basedir}\\Tools\\7z.exe t {filename}")]},
+    'win32': {'exe': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir} -aoa''', '''{basedir}\\Tools\\7z.exe t "{filename}"''')],
+              'rar': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir} -aoa''', '''{basedir}\\Tools\\7z.exe t "{filename}"''')],
+              'zip': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir} -aoa''', '''{basedir}\\Tools\\7z.exe t "{filename}"''')],
+              '7z' : [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir} -aoa''', '''{basedir}\\Tools\\7z.exe t "{filename}"''')]},
     'darwin': {'exe': [],
                'rar': [],
                'zip': [("unzip -o {filename}", "unzip -to {filename}")],
                '7z': []},
-    'linux': {
-        'exe': [("{basedir}\\Tools\\7z.exe x {filename -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")],
-        'rar': [],
-        'zip': [("{basedir}\\Tools\\7z.exe x {filename -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")],
-        '7z' : [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")]},
-    'linux2': {
-        'exe': [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")],
-        'rar': [],
-        'zip': [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")],
-        '7z' : [("{basedir}\\Tools\\7z.exe x {filename} -o{targetdir}", "{basedir}\\Tools\\7z.exe t {filename}")]}}
+    'linux': {'exe': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir}''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')],
+              'rar': [],
+              'zip': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir}''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')],
+              '7z' : [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir}''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')]},
+    'linux2': {'exe': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir}''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')],
+               'rar': [],
+               'zip': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir}''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')],
+               '7z' : [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir}''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')]}}
 
 import re
 
