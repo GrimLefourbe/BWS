@@ -9,7 +9,7 @@ import logging
 import subprocess
 
 #Solaufein different folder name
-#Saradas_magic BG1.1 ??
+#Saradas_magic BG1.1 like Quayle
 #Quayle_redonne pas de dossier sans \
 #PaintBG
 #NPCFlirt exe inside zip
@@ -111,7 +111,7 @@ class BWS:
             else:
                 logging.info('Could not find the file {}'.format(filename))
 
-    def DownloadMods(self, ToDl, dldir=None):
+    def DownloadMods(self, ToDl, dldir=None, ModsData=None):
         '''
         ModsToDl should be a list of dicts with entries for Save, Down and Size
         Size can be None, it will then be ignored
@@ -119,12 +119,15 @@ class BWS:
         :param ToDl:
         :return:
         '''
+        if ModsData is None:
+            ModsData=self.ModsData
         if dldir is None:
             dldir = self.dldir
 
         results = []
-        for data in ToDl:
-            url, filename, esize = data['Down'], data['Save'], data['Size']
+        for ind in ToDl:
+            data=ModsData[ind]
+            url, filename, expsize = data['Down'], data['Save'], data['Size']
             if url == "Manual" or filename == "Manual":
                 logging.info('Manual download encountered')
                 results.append(-1)
@@ -140,14 +143,14 @@ class BWS:
                 continue
 
             #size = os.path.getsize(dldir+'\\' + filename)
-            if size != esize:
+            if size != expsize:
                 logging.warning('Incorrect download size when downloading {} from {},'
-                                ' found size of {} and expected {}'.format(filename, url, size, esize))
+                                ' found size of {} and expected {}'.format(filename, url, size, expsize))
                 results.append(2)
                 continue
 
             logging.info('Download of {} from {} went as expected'.format(filename, url))
-            results.append(0)
+            results.append(1)
 
         logging.info('Download of {} files finished'.format(len(ToDl)))
         return results
@@ -196,7 +199,7 @@ class BWS:
 
         return res
 
-    def ExtMods(self, ToExt, mode=0, dldir = None, targetdir=None, basedir=None):
+    def ExtMods(self, ToExt, mode=0, dldir = None, targetdir=None, basedir=None, ModsData=None):
         '''
         if mode is 1, tests integrity of archives and returns list of tp2 names as well as path to main folder
         if mode is 0, extracts the archives to targetdir
@@ -206,6 +209,8 @@ class BWS:
         :param mode:
         :return:
         '''
+        if ModsData is None:
+            ModsData = self.ModsData
 
         txtdict = {0:['Extracting'], 1:['Testing']}
         if dldir is None:
@@ -216,20 +221,21 @@ class BWS:
             targetdir = self.dir + '\Extracted'
 
         results = []
-        for i in ToExt:
-            logging.info('{} {} : {}'.format(txtdict[mode][0], i['ID'],i['Save']))
-            filename = i['Save']
+        for ind in ToExt:
+            data = ModsData[ind]
+            logging.info('{} {} : {}'.format(txtdict[mode][0], data['ID'],data['Save']))
+            filename = data['Save']
 
             if filename=="Manual":
                 results.append(-1)
-                logging.warning('Skipping {} : {}'.format(i['ID'], filename))
+                logging.warning('Skipping {} : {}'.format(data['ID'], filename))
                 continue
             filepath = dldir +'\\' + filename
             if os.path.exists(filepath):
                 if mode == 0:
                     res = self.ExtractMod(self, filepath, targetdir=targetdir, basedir=basedir)
                 elif mode == 1:
-                    res = self.TestMod(filepath, modname=i['ID'], basedir=basedir)
+                    res = self.TestMod(filepath, modname=data['ID'], basedir=basedir)
                 else:
                     logging.ERROR('Unexpected argument for mode')
                     return 0
@@ -238,7 +244,7 @@ class BWS:
                 logging.warning("{} doesn't exist!".format(filepath))
                 results.append(2)
                 continue
-            logging.info('{} went fine for {} : {}'.format(txtdict[mode][0], i['ID'], filename))
+            logging.info('{} went fine for {} : {}'.format(txtdict[mode][0], data['ID'], filename))
         assert len(results) == len(ToExt)
         return results
 
@@ -333,8 +339,10 @@ class BWS:
 
     def No_GUI_loop(self, file, start=0, end=-1):
         self.LoadModsData(file)
-        m=self.DownloadMods(self.ModsData[start:end] if end != -1 else self.ModsData)
-        n=self.ExtMods(self.ModsData[start:end] if end!=-1 else self.ModsData, mode= 1)
+        WorkingInds=range(start, end if end!=-1 else len(self.ModsData))
+        m=self.DownloadMods(WorkingInds)
+        NewInds=[i for i,v in zip(WorkingInds,m) if v==1]
+        n=self.ExtMods(NewInds, mode=1)
 
         return m,n
 
