@@ -125,6 +125,6 @@ def Extract_Archive(filepath, targetdir=None, basedir='', ext_tool=None):
                       'ext_tool output :\n{}'.format(s, res))
         return 3
 
-    logging.info('Testing was successful for {}'.format(filepath))
+    logging.info('Extracting was successful for {}'.format(filepath))
 
     return 1

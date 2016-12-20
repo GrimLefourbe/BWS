@@ -1,5 +1,6 @@
 import ModInfo
 import Extract
+import Utils
 import Net
 import os
 import sys
@@ -7,9 +8,9 @@ import time
 import re
 import logging
 import subprocess
-import Utils
 import shutil
 import stat
+import tempfile
 
 #Solaufein different folder name
 #Saradas_magic BG1.1 like Quayle
@@ -23,7 +24,7 @@ import stat
 #imp asylum comme Quayle
 #questpack comme Solaufein
 #Banter packs comme Quayle
-#Angelo comme Quayle (~)
+
 
 def loginit(logdir):
     '''
@@ -66,7 +67,7 @@ class BWS:
             self.tmpdir = self.dir + '\\Temp'
         else:
             self.tmpdir = tmpdir
-        self.gamedir=gamedir
+        self.gamedir = gamedir
         os.makedirs(self.tmpdir, exist_ok=True)
         os.chmod(self.tmpdir, stat.S_IWUSR)
         os.makedirs(self.config, exist_ok=True)
@@ -77,7 +78,7 @@ class BWS:
         self.ModsData = []
 
         if no_gui:
-            inifile=self.config + r'\BG2EE.ini'
+            inifile = self.config + r'\BG2EE.ini'
             self.No_GUI_loop(inifile, start=start, end=end)
     def LoadModsData(self, inifile=None):
         if inifile is None:
@@ -101,7 +102,7 @@ class BWS:
         else:
             logging.warning("{} is not a file".format(inifile))
 
-    def DeleteMods(self, ToDel, dldir=None, logfile=None):
+    def DeleteMods(self, ToDel, dldir=None):
         '''
         ModsToDel should be the list of index of the mods to delete from the download directory
         :param ToDel:
@@ -121,6 +122,28 @@ class BWS:
                     raise
             else:
                 logging.info('Could not find the file {}'.format(filename))
+
+    def TestPresentMods(self, ToTest=None, ModsData=None, dldir=None):
+        if ModsData is None:
+            ModsData = self.ModsData
+        if dldir is None:
+            dldir = self.dldir
+        if ToTest is None:
+            ToTest = range(len(ModsData))
+        results = []
+        logging.info("Testing present mods in {}".format(dldir))
+        for ind in ToTest:
+            filepath = dldir + '\\' + ModsData[ind]['Save']
+            logging.info("Looking for file {}".format(filepath))
+            if os.path.isfile(filepath):
+                if os.path.getsize(filepath)==ModsData[ind]['Size']:
+                    results.append(1)
+                else:
+                    results.append(2)
+            else:
+                results.append(0)
+
+        return results
 
     def DownloadMods(self, ToDl, dldir=None, ModsData=None):
         '''
@@ -348,7 +371,10 @@ class BWS:
         assert len(results)==len(ToExt)
         return results
 
+    #for very special cases
     DataPDict ={}
+    #for when there's a second archive inside the first
+    SecArcPat = re.compile(r'^((?:[^\r\n\t\f\v\\]+?\\)*?(?:[^\r\n\t\f\v\\]+?\.(?:exe|zip|rar|7z)))$(?im)')
 
     def PrepMod(self, filepath, moddict, targetdir=None, tmpdir=None, basedir=None):
         '''
@@ -362,7 +388,10 @@ class BWS:
         if basedir is None:
             basedir = self.dir
         if tmpdir is None:
-            tmpdir = self.tmpdir
+            tmpdirobj = tempfile.TemporaryDirectory(prefix=self.tmpdir + '\\')
+            tmpdir = tmpdirobj.name
+        if targetdir is None:
+            targetdir = self.gamedir
 
         logging.info('Starting preparation of {} located at {}'.format(moddict['ID'],filepath))
         logging.info('tmp dir is {}, target dir is {}, basedir is {}'.format(tmpdir, targetdir, basedir))
@@ -384,44 +413,87 @@ class BWS:
         s = '\n'.join(files)
         tp2match = tp2Pat.search(s)
 
-        if tp2match:
-            tp2path = tp2match.group(1)
-            logging.info("Found tp2 path {} : {}".format(ID, tp2path))
-            if tp2path.split('\\')[-2].lower() == ID:
-                datapath = tp2path.rsplit('\\', 1)[-2]
+        if not tp2match:
+            logging.warning("Could not find tp2 on first try")
+            Arc2match = BWS.SecArcPat.search(s)
+            if Arc2match:
+                res = Extract.Extract_Archive(Arc2match.group(1),targetdir=tmpdir+'\\2', basedir=basedir)
+                if res != 1:
+                    logging.warning("unsuccessful extraction of {}, skipping {]".format(Arc2match.group(1), ID))
+                    Utils.cleanupdir(tmpdir)
+                    return 0
+                files = Utils.listsubdir(tmpdir+'\\2')
+                s = '\n'.join(files)
+                tp2match = tp2Pat.search(s)
+                if not tp2match:
+                    logging.warning("Could not find tp2 on 2nd try, skipping {}".format(ID))
+                    Utils.cleanupdir(tmpdir)
+                    return 0
             else:
-                dataPat = re.compile(r"((?:[^\r\n\t\f\v\\]+?\\)*?({}))(?(2)|backup)$(?mi)".format(ID))
-                logging.info("dataPat is {}".format(dataPat))
-                datamatch = dataPat.search(s)
-                if datamatch:
-                    datapath = datamatch.group(1)
+                logging.warning("Could not find secondary archive, skipping {}".format(ID))
+                Utils.cleanupdir(tmpdir)
+                return 0
+
+        tp2path = tp2match.group(1)
+        logging.info("Found tp2 path {} : {}".format(ID, tp2path))
+
+        if tp2path.split('\\')[-2].lower() == ID.lower():
+            datapath = tp2path.rsplit('\\', 1)[0]
+        else:
+            dataPat = re.compile(r"((?:[^\r\n\t\f\v\\]+?\\)*?(?:(?<=\\)|(?<=^))({}))(?(2)|backup)$(?mi)".format(ID))
+            logging.info("dataPat is {}".format(dataPat))
+            datamatch = dataPat.search(s)
+            if datamatch:
+                logging.debug("match is {}".format(datamatch))
+                datapath = datamatch.group(1)
+            else:
+                logging.info("Did not match, now looking through tp2")
+                with open(tp2path, 'rb') as f:
+                    tmps=f.readline().lower()
+                    while b'backup' not in tmps and tmps != b'':
+                        tmps=f.readline().lower()
+
+                logging.debug('tmps is {}'.format(tmps))
+                if tmps != b'':
+                    tmps = tmps.replace(b'/', b'\\')
+                    tmps = tmps.split(b'~')[1].decode().rsplit('\\', 1)[0]
+                    dataPat = re.compile(r"((?:[^\r\n\t\f\v\\]+?\\)*?{})$(?mi)".format(tmps.rsplit('\\', 1)[0]))
+                    logging.info('New dataPat is {}'.format(dataPat))
+                    datapath = dataPat.search(s).group(1)
                 else:
                     logging.warning('{} : Data folder not found, rare exception'.format(ID))
                     datapath = BWS.DataPDict[ID]
-        else:
-            logging.warning("Could not find tp2 for {}".format(ID))
-            shutil.rmtree(tmpdir, onerror=Utils.onerror)
-            os.makedirs(tmpdir, exist_ok=True)
 
-            return 0
         logging.info('Found tp2 and folder {} | {}'.format(tp2path, datapath))
 
-        shutil.rmtree(tmpdir, onerror=Utils.onerror)
-        os.makedirs(tmpdir, exist_ok=True)
+        if datapath in tp2path:
+            src = datapath.rsplit('\\', 1)[0]
+            Utils.MergeFolderTo(src, targetdir)
+        else:
+            src = datapath.rsplit('\\', 1)[0]
+            res = Utils.MergeFolderTo(src, targetdir)
+            targettp2 = targetdir + '\\' + tp2path.rsplit('\\',1)[1]
+            if not os.path.exists(targettp2):
+                shutil.move(tp2path, targettp2)
 
-        return tp2path, datapath
+        try:
+            Utils.cleanupdir(tmpdir)
+        except PermissionError:
+            logging.exception("Could not delete tmpdir for {}".format(ID))
 
+        return res
 
     def No_GUI_loop(self, file, start=0, end=-1):
         self.LoadModsData(file)
         WorkingInds = range(start, end if end!=-1 else len(self.ModsData))
-        m = self.DownloadMods(WorkingInds)
+        #m = self.DownloadMods(WorkingInds)
+        m = self.TestPresentMods(ToTest=WorkingInds)
         NewInds = [i for i,v in zip(WorkingInds,m) if v == 1]
         #n = self.ExtMods(NewInds, mode=1)
-        shutil.rmtree(self.tmpdir, onerror=Utils.onerror)
-        os.makedirs(self.tmpdir, exist_ok = True)
+        Utils.cleanupdir(self.tmpdir)
+
         n = [self.PrepMod(self.dldir + '\\' + self.ModsData[i]['Save'],self.ModsData[i],
-                          targetdir='E:\\Coding\\BWS-Extracts', tmpdir=self.tmpdir, basedir=self.dir) for i in NewInds]
+                          targetdir='E:\\Coding\\BWS Game', basedir=self.dir) for i in NewInds]
         return m, n
 
 
