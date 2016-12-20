@@ -7,6 +7,9 @@ import time
 import re
 import logging
 import subprocess
+import Utils
+import shutil
+import stat
 
 #Solaufein different folder name
 #Saradas_magic BG1.1 like Quayle
@@ -40,9 +43,10 @@ def loginit(logdir):
     logging.getLogger('').addHandler(console)
 
 class BWS:
-    def __init__(self, dir=None, dldir=None, logsdir=None, no_gui=True, config=None, start=0, end=-1):
+    def __init__(self, dir=None, dldir=None, logsdir=None, no_gui=True, configdir=None, tmpdir=None, gamedir=None,
+                 start=0, end=-1):
         if dir is None:
-            self.dir = sys.path[0]
+            self.dir = sys.path[0].replace('/', '\\')
         else:
             self.dir = dir
         os.chdir(self.dir)
@@ -54,10 +58,17 @@ class BWS:
             self.logsdir = self.dir + '\\Logs'
         else:
             self.logsdir = logsdir
-        if config is None:
-            self.config = self.dir + r'\Config'
+        if configdir is None:
+            self.config = self.dir + '\\Config'
         else:
             self.config = logsdir
+        if tmpdir is None:
+            self.tmpdir = self.dir + '\\Temp'
+        else:
+            self.tmpdir = tmpdir
+        self.gamedir=gamedir
+        os.makedirs(self.tmpdir, exist_ok=True)
+        os.chmod(self.tmpdir, stat.S_IWUSR)
         os.makedirs(self.config, exist_ok=True)
         os.makedirs(self.dldir, exist_ok=True)
         os.makedirs(self.logsdir, exist_ok=True)
@@ -237,7 +248,7 @@ class BWS:
                 elif mode == 1:
                     res = self.TestMod(filepath, modname=data['ID'], basedir=basedir)
                 else:
-                    logging.ERROR('Unexpected argument for mode')
+                    logging.error('Unexpected argument for mode')
                     return 0
                 results.append(res)
             else:
@@ -294,7 +305,7 @@ class BWS:
         assert len(results)==len(ToTest)
         return results
 
-    def ExtractMods(self, ToExt, dldir=None, targetdir=None):
+    def ExtractMods(self, ToExt, srcdir=None, targetdir=None):
         '''
         -1:Manual
         0:CalledProcessError
@@ -302,11 +313,11 @@ class BWS:
         2:File doesn't exist
         3:Test found errors
         :param ToExt:
-        :param dldir:
+        :param srcdir:
         :return:
         '''
-        if dldir is None:
-            dldir = self.dldir
+        if srcdir is None:
+            srcdir = self.dldir
         if targetdir is None:
             targetdir = self.dir + '\Extracted'
 
@@ -314,7 +325,7 @@ class BWS:
         for i in ToExt:
             logging.info('Extracting {} : {}'.format(i['ID'],i['Save']))
             filename = i['Save']
-            filepath = dldir + '\\' + filename
+            filepath = srcdir + '\\' + filename
             if filename == "Manual":
                 results.append(-1)
                 logging.warning('Skipping {} : {}'.format(i['ID'],filepath))
@@ -337,13 +348,80 @@ class BWS:
         assert len(results)==len(ToExt)
         return results
 
+    DataPDict ={}
+
+    def PrepMod(self, filepath, moddict, targetdir=None, tmpdir=None, basedir=None):
+        '''
+
+        :param filepath:
+        :param tmpdir:
+        :param basedir:
+        :return:
+        '''
+
+        if basedir is None:
+            basedir = self.dir
+        if tmpdir is None:
+            tmpdir = self.tmpdir
+
+        logging.info('Starting preparation of {} located at {}'.format(moddict['ID'],filepath))
+        logging.info('tmp dir is {}, target dir is {}, basedir is {}'.format(tmpdir, targetdir, basedir))
+
+        if len(os.listdir(tmpdir)) != 0:
+            logging.error("Something went wrong, tmpdir isn't empty, skipping {}".format(moddict['ID']))
+            return 0
+
+        res = Extract.Extract_Archive(filepath, targetdir=tmpdir, basedir=basedir)
+        if res != 1:
+            logging.warning("Something went wrong during extraction, skipping {}".format(moddict['ID']))
+            return 2
+
+        ID = moddict['ID']
+        files = Utils.listsubdir(tmpdir)
+
+        tp2Pat = re.compile(r"((?:[^\r\n\t\f\v\\]+?\\)*?(?:setup-)?{}.tp2)$(?mi)".format(ID))
+        logging.info('tp2pat is {}'.format(tp2Pat))
+        s = '\n'.join(files)
+        tp2match = tp2Pat.search(s)
+
+        if tp2match:
+            tp2path = tp2match.group(1)
+            logging.info("Found tp2 path {} : {}".format(ID, tp2path))
+            if tp2path.split('\\')[-2].lower() == ID:
+                datapath = tp2path.rsplit('\\', 1)[-2]
+            else:
+                dataPat = re.compile(r"((?:[^\r\n\t\f\v\\]+?\\)*?({}))(?(2)|backup)$(?mi)".format(ID))
+                logging.info("dataPat is {}".format(dataPat))
+                datamatch = dataPat.search(s)
+                if datamatch:
+                    datapath = datamatch.group(1)
+                else:
+                    logging.warning('{} : Data folder not found, rare exception'.format(ID))
+                    datapath = BWS.DataPDict[ID]
+        else:
+            logging.warning("Could not find tp2 for {}".format(ID))
+            shutil.rmtree(tmpdir, onerror=Utils.onerror)
+            os.makedirs(tmpdir, exist_ok=True)
+
+            return 0
+        logging.info('Found tp2 and folder {} | {}'.format(tp2path, datapath))
+
+        shutil.rmtree(tmpdir, onerror=Utils.onerror)
+        os.makedirs(tmpdir, exist_ok=True)
+
+        return tp2path, datapath
+
+
     def No_GUI_loop(self, file, start=0, end=-1):
         self.LoadModsData(file)
-        WorkingInds=range(start, end if end!=-1 else len(self.ModsData))
-        m=self.DownloadMods(WorkingInds)
-        NewInds=[i for i,v in zip(WorkingInds,m) if v==1]
-        n=self.ExtMods(NewInds, mode=1)
-
-        return m,n
+        WorkingInds = range(start, end if end!=-1 else len(self.ModsData))
+        m = self.DownloadMods(WorkingInds)
+        NewInds = [i for i,v in zip(WorkingInds,m) if v == 1]
+        #n = self.ExtMods(NewInds, mode=1)
+        shutil.rmtree(self.tmpdir, onerror=Utils.onerror)
+        os.makedirs(self.tmpdir, exist_ok = True)
+        n = [self.PrepMod(self.dldir + '\\' + self.ModsData[i]['Save'],self.ModsData[i],
+                          targetdir='E:\\Coding\\BWS-Extracts', tmpdir=self.tmpdir, basedir=self.dir) for i in NewInds]
+        return m, n
 
 

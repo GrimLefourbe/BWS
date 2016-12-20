@@ -1,55 +1,35 @@
+import logging
 import os
 import subprocess
-import logging
+
+from Utils import RegexBytesSeq
 
 '''
 ext_tools['bar']['foo'] is a list of tuples with a command used to extract files of extension .foo on the platform bar and a command used to test integrity of files
 ext_tools['bar']['foo'][i][0] is used to extract, ext_tools['bar']['foo'][i][1] is used to test.
 '''
 ext_tools = {
-    'win32': {'exe': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir} -aoa''', '''{basedir}\\Tools\\7z.exe t "{filename}"''')],
-              'rar': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir} -aoa''', '''{basedir}\\Tools\\7z.exe t "{filename}"''')],
-              'zip': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir} -aoa''', '''{basedir}\\Tools\\7z.exe t "{filename}"''')],
-              '7z' : [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir} -aoa''', '''{basedir}\\Tools\\7z.exe t "{filename}"''')]},
+    'win32': {'exe': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" "-o{targetdir}" -aoa''', '''{basedir}\\Tools\\7z.exe t "{filename}"''')],
+              'rar': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" "-o{targetdir}" -aoa''', '''{basedir}\\Tools\\7z.exe t "{filename}"''')],
+              'zip': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" "-o{targetdir}" -aoa''', '''{basedir}\\Tools\\7z.exe t "{filename}"''')],
+              '7z' : [('''"{basedir}\\Tools\\7z.exe" x "{filename}" "-o{targetdir}" -aoa''', '''{basedir}\\Tools\\7z.exe t "{filename}"''')]},
     'darwin': {'exe': [],
                'rar': [],
                'zip': [("unzip -o {filename}", "unzip -to {filename}")],
                '7z': []},
-    'linux': {'exe': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir}''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')],
+    'linux': {'exe': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o"{targetdir}"''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')],
               'rar': [],
-              'zip': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir}''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')],
-              '7z' : [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir}''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')]},
-    'linux2': {'exe': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir}''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')],
+              'zip': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o"{targetdir}"''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')],
+              '7z' : [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o"{targetdir}"''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')]},
+    'linux2': {'exe': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o"{targetdir}"''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')],
                'rar': [],
-               'zip': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir}''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')],
-               '7z' : [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o{targetdir}''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')]}}
+               'zip': [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o"{targetdir}"''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')],
+               '7z' : [('''"{basedir}\\Tools\\7z.exe" x "{filename}" -o"{targetdir}"''', '''"{basedir}\\Tools\\7z.exe" t "{filename}"''')]}}
 
 import re
 
 CheckPat = re.compile(b"(Everything is Ok)|(?P<fieldname>\w+): *(?P<value>\d+)\r")
 
-def RegexBytesSeq(Regstr, bstring : bytes, keywords = None):
-    '''
-    Regstr is a list of bytes strings representing regex patterns. Any keywords will be fed back to
-    the next elements.
-    bstring if os bytes type.
-    :param Regstr:
-    :return:
-    '''
-
-    if keywords is None:
-        keywords = {}
-    groups = []
-    logging.info('Base keywords : {}'.format(keywords))
-    for s in Regstr:
-        logging.info('Current re is {}'.format(s))
-        match = re.search(s%keywords, bstring)
-        if match:
-            keywords.update({k.encode(): v for k, v in match.groupdict().items()})
-            logging.info('New keywords : {}'.format(keywords))
-            groups.append(match.groups())
-
-    return groups
 
 def Check_Archive(filepath, basedir='', regex = None, ext_tool=None):
     '''
