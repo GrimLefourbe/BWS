@@ -44,16 +44,16 @@ def MergeFolderTo(src, dst, samedrive=-1):
     copy_ok = 1
     delete_ok = 1
     for p in srcl:
-        srcpath = src + '\\' + p
+        srcpath = src + '/' + p
         if os.path.isdir(srcpath):
             if p in dstl:
-                c,d = MergeFolderTo(srcpath, dst + '\\' + p, samedrive)
+                c,d = MergeFolderTo(srcpath, dst + '/' + p, samedrive)
                 copy_ok &= c
                 delete_ok &= d
             elif samedrive:
                 shutil.move(srcpath, dst)
             else:
-                shutil.copytree(srcpath, dst + '\\' + p)
+                shutil.copytree(srcpath, dst + '/' + p)
                 try:
                     shutil.rmtree(srcpath, onerror=onerror)
                 except PermissionError:
@@ -61,8 +61,8 @@ def MergeFolderTo(src, dst, samedrive=-1):
                     delete_ok = 0
                     continue
         else:
-            srcpath = src + '\\' + p
-            dstpath = dst + '\\' + p
+            srcpath = src + '/' + p
+            dstpath = dst + '/' + p
             if p in dstl:
                 RemoveFile(dstpath)
                 if samedrive:
@@ -105,7 +105,7 @@ def RemoveFile(path):
 
 def cleanupdir(path):
     for i in os.listdir(path):
-        p = path + '\\' + i
+        p = path + '/' + i
         if os.path.isfile(p):
             try:
                 os.remove(p)
@@ -113,7 +113,7 @@ def cleanupdir(path):
                 os.chmod(p, stat.S_IWRITE|stat.S_IWUSR)
                 os.remove(p)
         else:
-            shutil.rmtree(path + '\\' + i, onerror=onerror)
+            shutil.rmtree(path + '/' + i, onerror=onerror)
     if not len(os.listdir(path))==0:
         time.sleep(2)
         if not len(os.listdir(path))==0:
@@ -123,7 +123,12 @@ def cleanupdir(path):
 def listsubdir(path : str):
     s=[]
     for i in os.walk(path.rstrip(r'\/')):
-        s.append(i[0])
+        #logging.debug('i[0] = {}'.format(i[0]))
+        f = i[0].replace('\\', '/')
+        s.append(f)
+        #logging.debug('f is {}'.format(f))
         for j in i[2]:
-            s.append(i[0] + '\\' + j)
+            m = f + '/' + j
+            #logging.debug('m is {}'.format(m))
+            s.append(m)
     return s

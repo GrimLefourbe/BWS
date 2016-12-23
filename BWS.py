@@ -35,7 +35,7 @@ def loginit(logdir):
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%m-%d %H:%M',
-                        filename=logdir + '\\' + time.strftime('BWS_%Y_%m_%d_%H_%M.log'),
+                        filename=logdir + '/' + time.strftime('BWS_%Y_%m_%d_%H_%M.log'),
                         filemode='w')
     console = logging.StreamHandler()
     console.setLevel(logging.DEBUG)
@@ -47,24 +47,24 @@ class BWS:
     def __init__(self, dir=None, dldir=None, logsdir=None, no_gui=True, configdir=None, tmpdir=None, gamedir=None,
                  start=0, end=-1):
         if dir is None:
-            self.dir = sys.path[0].replace('/', '\\')
+            self.dir = sys.path[0].replace('\\', '/')
         else:
             self.dir = dir
         os.chdir(self.dir)
         if dldir is None:
-            self.dldir = self.dir + '\\Downloads'
+            self.dldir = self.dir + '/Downloads'
         else:
             self.dldir = dldir
         if logsdir is None:
-            self.logsdir = self.dir + '\\Logs'
+            self.logsdir = self.dir + '/Logs'
         else:
             self.logsdir = logsdir
         if configdir is None:
-            self.config = self.dir + '\\Config'
+            self.config = self.dir + '/Config'
         else:
             self.config = logsdir
         if tmpdir is None:
-            self.tmpdir = self.dir + '\\Temp'
+            self.tmpdir = self.dir + '/Temp'
         else:
             self.tmpdir = tmpdir
         self.gamedir = gamedir
@@ -78,11 +78,11 @@ class BWS:
         self.ModsData = []
 
         if no_gui:
-            inifile = self.config + r'\BG2EE.ini'
+            inifile = self.config + r'/BG2EE.ini'
             self.No_GUI_loop(inifile, start=start, end=end)
     def LoadModsData(self, inifile=None):
         if inifile is None:
-            inifile = self.dir + '\\Mod.ini'
+            inifile = self.dir + '/Mod.ini'
 
         if os.path.isfile(inifile):
 
@@ -112,7 +112,7 @@ class BWS:
             dldir = self.dldir
 
         for i in ToDel:
-            filename = dldir + '\\' + i['Save']
+            filename = dldir + '/' + i['Save']
             if os.path.exists(filename):
                 logging.info('Deleting file {}'.format(filename))
                 try:
@@ -133,7 +133,7 @@ class BWS:
         results = []
         logging.info("Testing present mods in {}".format(dldir))
         for ind in ToTest:
-            filepath = dldir + '\\' + ModsData[ind]['Save']
+            filepath = dldir + '/' + ModsData[ind]['Save']
             logging.info("Looking for file {}".format(filepath))
             if os.path.isfile(filepath):
                 if os.path.getsize(filepath)==ModsData[ind]['Size']:
@@ -168,7 +168,7 @@ class BWS:
                 continue
 
             logging.info('Starting download of {} from {}'.format(filename, url))
-            code, size = Net.DownloadFile(url.rstrip('/'), dldir +'\\' + filename)
+            code, size = Net.DownloadFile(url.rstrip('/'), dldir + '/' + filename)
 
             if code != 200:
                 logging.warning('Received {} code when downloading file {} from {}'.format(code, filename, url))
@@ -176,7 +176,7 @@ class BWS:
                 results.append(code)
                 continue
 
-            #size = os.path.getsize(dldir+'\\' + filename)
+            #size = os.path.getsize(dldir+'/' + filename)
             if size != expsize:
                 logging.warning('Incorrect download size when downloading {} from {},'
                                 ' found size of {} and expected {}'.format(filename, url, size, expsize))
@@ -200,11 +200,11 @@ class BWS:
         if basedir is None:
             basedir = self.dir
 
-        #regexlist = [rb'(?:[^\r\n\t\f\v \\]+\\)*(?:[sS][eE][tT][uU][pP]-)?(?P<tpname>[^\r\n\t\f\v \\]*?)\.[Tt][Pp]2',
-        #             rb'((?:[^\r\n\t\f\v \\]+?\\)*?)(%(tpname)s)(?=\r?$)(?m)']
+        #regexlist = [rb'(?:[^\r\n\t\f\v /]+/)*(?:[sS][eE][tT][uU][pP]-)?(?P<tpname>[^\r\n\t\f\v /]*?)\.[Tt][Pp]2',
+        #             rb'((?:[^\r\n\t\f\v /]+?/)*?)(%(tpname)s)(?=\r?$)(?m)']
         if isinstance(modname,str):
             modname=modname.encode('ascii')
-        regexlist = [rb'((?:[^\r\n\t\f\v \\]+?\\)*?)(%s)(?:\\backup\r?$)?(?=\r?$)(?mi)' % modname]
+        regexlist = [rb'((?:[^\r\n\t\f\v /]+?/)*?)(%s)(?:/backup\r?$)?(?=\r?$)(?mi)' % modname]
 
         res = Extract.Check_Archive(filepath,basedir=self.dir, regex=regexlist)
 
@@ -264,7 +264,7 @@ class BWS:
                 results.append(-1)
                 logging.warning('Skipping {} : {}'.format(data['ID'], filename))
                 continue
-            filepath = dldir +'\\' + filename
+            filepath = dldir +'/' + filename
             if os.path.exists(filepath):
                 if mode == 0:
                     res = self.ExtractMod(self, filepath, targetdir=targetdir, basedir=basedir)
@@ -300,15 +300,15 @@ class BWS:
         for i in ToTest:
             logging.info('Testing {} : {}'.format(i['ID'],i['Save']))
             filename = i['Save']
-            filepath = dldir + '\\' + filename
+            filepath = dldir + '/' + filename
             if filename=="Manual":
                 results.append(-1)
                 logging.warning('Skipping {} : {}'.format(i['ID'],filepath))
                 continue
 
             if os.path.exists(filepath):
-                regexlist = [rb'(?:[^\r\n\t\f\v \\]+\\)*(?:[sS][eE][tT][uU][pP]-)?(?P<tpname>[^\r\n\t\f\v \\]*?)\.[Tt][Pp]2',
-                             rb'((?:[^\r\n\t\f\v \\]+?\\)*?)(%(tpname)s)(?=\r?$)(?m)']
+                regexlist = [rb'(?:[^\r\n\t\f\v /]+/)*(?:[sS][eE][tT][uU][pP]-)?(?P<tpname>[^\r\n\t\f\v /]*?)\.[Tt][Pp]2',
+                             rb'((?:[^\r\n\t\f\v /]+?/)*?)(%(tpname)s)(?=\r?$)(?m)']
 
                 res=Extract.Check_Archive(filepath,basedir=self.dir, regex=regexlist)
 
@@ -342,13 +342,13 @@ class BWS:
         if srcdir is None:
             srcdir = self.dldir
         if targetdir is None:
-            targetdir = self.dir + '\Extracted'
+            targetdir = self.dir + '/Extracted'
 
         results = []
         for i in ToExt:
             logging.info('Extracting {} : {}'.format(i['ID'],i['Save']))
             filename = i['Save']
-            filepath = srcdir + '\\' + filename
+            filepath = srcdir + '/' + filename
             if filename == "Manual":
                 results.append(-1)
                 logging.warning('Skipping {} : {}'.format(i['ID'],filepath))
@@ -374,7 +374,7 @@ class BWS:
     #for very special cases
     DataPDict ={}
     #for when there's a second archive inside the first
-    SecArcPat = re.compile(r'^((?:[^\r\n\t\f\v\\]+?\\)*?(?:[^\r\n\t\f\v\\]+?\.(?:exe|zip|rar|7z)))$(?im)')
+    SecArcPat = re.compile(r'^((?:[^\r\n\t\f\v/]+?/)*?(?:[^\r\n\t\f\v/]+?\.(?:exe|zip|rar|7z)))$(?im)')
 
     def PrepMod(self, filepath, moddict, targetdir=None, tmpdir=None, basedir=None):
         '''
@@ -388,7 +388,7 @@ class BWS:
         if basedir is None:
             basedir = self.dir
         if tmpdir is None:
-            tmpdirobj = tempfile.TemporaryDirectory(prefix=self.tmpdir + '\\')
+            tmpdirobj = tempfile.TemporaryDirectory(prefix=self.tmpdir + '/')
             tmpdir = tmpdirobj.name
         if targetdir is None:
             targetdir = self.gamedir
@@ -408,7 +408,7 @@ class BWS:
         ID = moddict['ID']
         files = Utils.listsubdir(tmpdir)
 
-        tp2Pat = re.compile(r"((?:[^\r\n\t\f\v\\]+?\\)*?(?:setup-)?{}.tp2)$(?mi)".format(ID))
+        tp2Pat = re.compile(r"((?:[^\r\n\t\f\v/]+?/)*?(?:setup-)?{}.tp2)$(?mi)".format(ID))
         logging.info('tp2pat is {}'.format(tp2Pat))
         s = '\n'.join(files)
         tp2match = tp2Pat.search(s)
@@ -417,12 +417,12 @@ class BWS:
             logging.warning("Could not find tp2 on first try")
             Arc2match = BWS.SecArcPat.search(s)
             if Arc2match:
-                res = Extract.Extract_Archive(Arc2match.group(1),targetdir=tmpdir+'\\2', basedir=basedir)
+                res = Extract.Extract_Archive(Arc2match.group(1),targetdir=tmpdir+'/2', basedir=basedir)
                 if res != 1:
                     logging.warning("unsuccessful extraction of {}, skipping {]".format(Arc2match.group(1), ID))
                     Utils.cleanupdir(tmpdir)
                     return 0
-                files = Utils.listsubdir(tmpdir+'\\2')
+                files = Utils.listsubdir(tmpdir+'/2')
                 s = '\n'.join(files)
                 tp2match = tp2Pat.search(s)
                 if not tp2match:
@@ -437,10 +437,10 @@ class BWS:
         tp2path = tp2match.group(1)
         logging.info("Found tp2 path {} : {}".format(ID, tp2path))
 
-        if tp2path.split('\\')[-2].lower() == ID.lower():
-            datapath = tp2path.rsplit('\\', 1)[0]
+        if tp2path.split('/')[-2].lower() == ID.lower():
+            datapath = tp2path.rsplit('/', 1)[0]
         else:
-            dataPat = re.compile(r"((?:[^\r\n\t\f\v\\]+?\\)*?(?:(?<=\\)|(?<=^))({}))(?(2)|backup)$(?mi)".format(ID))
+            dataPat = re.compile(r"((?:[^\r\n\t\f\v/]+?/)*?(?:(?<=/)|(?<=^))({}))(?(2)|backup)$(?mi)".format(ID))
             logging.info("dataPat is {}".format(dataPat))
             datamatch = dataPat.search(s)
             if datamatch:
@@ -455,9 +455,11 @@ class BWS:
 
                 logging.debug('tmps is {}'.format(tmps))
                 if tmps != b'':
-                    tmps = tmps.replace(b'/', b'\\')
-                    tmps = tmps.split(b'~')[1].decode().rsplit('\\', 1)[0]
-                    dataPat = re.compile(r"((?:[^\r\n\t\f\v\\]+?\\)*?{})$(?mi)".format(tmps.rsplit('\\', 1)[0]))
+                    tmps = tmps.replace(b'\\', b'/')
+                    tmps = tmps.split(b'~')[1].decode()
+                    logging.debug('tmps is {}'.format(tmps))
+                    tmps = tmps.rsplit('/', 1)[0]
+                    dataPat = re.compile(r"((?:[^\r\n\t\f\v/]+?/)*?{})$(?mi)".format(tmps.rsplit('/', 1)[0]))
                     logging.info('New dataPat is {}'.format(dataPat))
                     datapath = dataPat.search(s).group(1)
                 else:
@@ -467,12 +469,12 @@ class BWS:
         logging.info('Found tp2 and folder {} | {}'.format(tp2path, datapath))
 
         if datapath in tp2path:
-            src = datapath.rsplit('\\', 1)[0]
+            src = datapath.rsplit('/', 1)[0]
             Utils.MergeFolderTo(src, targetdir)
         else:
-            src = datapath.rsplit('\\', 1)[0]
+            src = datapath.rsplit('/', 1)[0]
             res = Utils.MergeFolderTo(src, targetdir)
-            targettp2 = targetdir + '\\' + tp2path.rsplit('\\',1)[1]
+            targettp2 = targetdir + '/' + tp2path.rsplit('/',1)[1]
             if not os.path.exists(targettp2):
                 shutil.move(tp2path, targettp2)
 
@@ -492,8 +494,8 @@ class BWS:
         #n = self.ExtMods(NewInds, mode=1)
         Utils.cleanupdir(self.tmpdir)
 
-        n = [self.PrepMod(self.dldir + '\\' + self.ModsData[i]['Save'],self.ModsData[i],
-                          targetdir='E:\\Coding\\BWS Game', basedir=self.dir) for i in NewInds]
+        n = [self.PrepMod(self.dldir + '/' + self.ModsData[i]['Save'],self.ModsData[i],
+                          targetdir='E:/Coding/BWS Game', basedir=self.dir) for i in NewInds]
         return m, n
 
 
