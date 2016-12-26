@@ -67,12 +67,15 @@ class BWS:
             self.tmpdir = self.dir + '/Temp'
         else:
             self.tmpdir = tmpdir
-        self.gamedir = gamedir
+        if gamedir is None:
+            self.gamedir = self.dir + '/Game'
+        else:
+            self.gamedir = gamedir
         os.makedirs(self.tmpdir, exist_ok=True)
-        os.chmod(self.tmpdir, stat.S_IWUSR)
         os.makedirs(self.config, exist_ok=True)
         os.makedirs(self.dldir, exist_ok=True)
         os.makedirs(self.logsdir, exist_ok=True)
+        os.makedirs(self.gamedir, exist_ok=True)
         loginit(self.logsdir)
         logging.info('basedir is {}, dldir is {}, logsdir is {}'.format(self.dir,self.dldir, self.logsdir))
         self.ModsData = []
@@ -488,14 +491,14 @@ class BWS:
     def No_GUI_loop(self, file, start=0, end=-1):
         self.LoadModsData(file)
         WorkingInds = range(start, end if end!=-1 else len(self.ModsData))
-        #m = self.DownloadMods(WorkingInds)
-        m = self.TestPresentMods(ToTest=WorkingInds)
+        m = self.DownloadMods(WorkingInds)
+        #m = self.TestPresentMods(ToTest=WorkingInds)
         NewInds = [i for i,v in zip(WorkingInds,m) if v == 1]
         #n = self.ExtMods(NewInds, mode=1)
         Utils.cleanupdir(self.tmpdir)
 
         n = [self.PrepMod(self.dldir + '/' + self.ModsData[i]['Save'],self.ModsData[i],
-                          targetdir='E:/Coding/BWS Game', basedir=self.dir) for i in NewInds]
+                          targetdir=self.gamedir, basedir=self.dir) for i in NewInds]
         return m, n
 
 

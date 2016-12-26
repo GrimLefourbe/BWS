@@ -1,6 +1,9 @@
 import logging
 import os
 import subprocess
+import shlex
+from sys import platform
+
 
 from Utils import RegexBytesSeq
 
@@ -44,8 +47,12 @@ def Check_Archive(filepath, basedir='', regex = None, ext_tool=None):
     :param ext_tool:
     :return:
     '''
-    startupinfo = subprocess.STARTUPINFO()
-    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    # Stops the console window from popping
+    if platform == 'win32':
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    else:
+        startupinfo = None
 
 
     if ext_tool is None:
@@ -56,7 +63,7 @@ def Check_Archive(filepath, basedir='', regex = None, ext_tool=None):
     logging.info('Command is {}'.format(command))
     # uses the extraction tool to check the validity of the archive and its contents
     try:
-        res = subprocess.check_output(command, startupinfo=startupinfo)
+        res = subprocess.check_output(shlex.split(command), startupinfo=startupinfo)
     except subprocess.CalledProcessError:
         logging.exception('Returning 0 due to exception during the execution of {}'.format(command))
         return 0
@@ -84,7 +91,6 @@ def Check_Archive(filepath, basedir='', regex = None, ext_tool=None):
 
 
 def SelectTool(filename):
-    from sys import platform
     platform_tools = ext_tools[platform]
     ext = filename.rsplit('.')[-1]
     if ext in platform_tools:
@@ -92,15 +98,18 @@ def SelectTool(filename):
 
 def Extract_Archive(filepath, targetdir=None, basedir='', ext_tool=None):
     if targetdir is None:
-        targetdir = filepath.rsplit(sep='.', maxsplit=1)
+        targetdir = filepath.rsplit(sep='/', maxsplit=1)
         os.makedirs(targetdir, exist_ok=True)
 
     if ext_tool is None:
         ext_tool = SelectTool(filepath)
 
     # Stops the console window from popping
-    startupinfo = subprocess.STARTUPINFO()
-    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    if platform == 'win32':
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    else:
+        startupinfo = None
 
     ext_tool = SelectTool(filepath)
 
@@ -109,7 +118,9 @@ def Extract_Archive(filepath, targetdir=None, basedir='', ext_tool=None):
     logging.info('Command is {}'.format(command))
     # uses the extraction tool to check the validity of the archive and its contents
     try:
-        res = subprocess.check_output(command, startupinfo=startupinfo)
+        res = subprocess.check_output(shlex.split(command), startupinfo=startupinfo)
+        # arg posix of split should logically be False on windows but it works only if posix is False on Windows
+        # because subprocess.check_output reconstructs the string with proper escapes from the list
     except subprocess.CalledProcessError:
         logging.exception('Returning 0 due to exception during the execution of {}'.format(command))
         return 0
