@@ -85,12 +85,13 @@ class BWS:
 
             for i in ModsData:
                 logging.info('Converting {}'.format(i['ID']))
-                if i['Size'] not in (None, 'Manual'):
-                    i['Size'] = int(i['Size'])
+                if 'Size' in i:
+                    try:
+                        i['Size'] = int(i['Size'])
+                    except ValueError:
+                        logging.warning('Could not convert {} to int'.format(i['Size']))
                 else:
-                    logging.warning('Could not convert {} to int'.format(i['Size']))
-
-
+                    logging.warning('No size specified')
             self.ModsData += ModsData
         else:
             logging.warning("{} is not a file".format(inifile))
