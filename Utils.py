@@ -47,7 +47,7 @@ def MergeFolderTo(src, dst, samedrive=-1):
         srcpath = src + '/' + p
         if os.path.isdir(srcpath):
             if p in dstl:
-                c,d = MergeFolderTo(srcpath, dst + '/' + p, samedrive)
+                c, d = MergeFolderTo(srcpath, dst + '/' + p, samedrive)
                 copy_ok &= c
                 delete_ok &= d
             elif samedrive:

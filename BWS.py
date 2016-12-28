@@ -12,18 +12,8 @@ import shutil
 import stat
 import tempfile
 
-#Solaufein different folder name
-#Saradas_magic BG1.1 like Quayle
-#Quayle_redonne pas de dossier sans \
-#PaintBG
-#NPCFlirt exe inside zip
-#LongerRoad different folder name
-#LaValygar comme Quayle
-#Keto comme NPCFlirt
-#item upgrade comme Solaufein
-#imp asylum comme Quayle
-#questpack comme Solaufein
-#Banter packs comme Quayle
+
+#NTotSC 2 in 1??
 
 
 def loginit(logdir):
@@ -217,26 +207,7 @@ class BWS:
         else:
             return res
 
-    def ExtractMod(self, filepath, basedir=None, targetdir=None):
-        '''
-        Returns 0 if the extraction didn't complete
-        Returns 1 if the extraction went well
-        Returns 3 if the extracting went bad
-
-        :param filepath:
-        :param basedir:
-        :param targetdir:
-        :return:
-        '''
-
-        if basedir is None:
-            basedir = self.dir
-
-        res = Extract.Extract_Archive(filepath, targetdir=targetdir, basedir=basedir)
-
-        return res
-
-    def ExtMods(self, ToExt, mode=0, dldir = None, targetdir=None, basedir=None, ModsData=None):
+    def TestMods(self, ToExt, dldir = None, basedir=None, ModsData=None):
         '''
         if mode is 1, tests integrity of archives and returns list of tp2 names as well as path to main folder
         if mode is 0, extracts the archives to targetdir
@@ -254,13 +225,12 @@ class BWS:
             dldir = self.dldir
         if basedir is None:
             basedir = self.dir
-        if mode == 0 and targetdir is None:
-            targetdir = self.dir + '\Extracted'
+
 
         results = []
         for ind in ToExt:
             data = ModsData[ind]
-            logging.info('{} {} : {}'.format(txtdict[mode][0], data['ID'],data['Save']))
+            logging.info('{} {} : {}'.format(txtdict[1][0], data['ID'],data['Save']))
             filename = data['Save']
 
             if filename=="Manual":
@@ -269,115 +239,20 @@ class BWS:
                 continue
             filepath = dldir +'/' + filename
             if os.path.exists(filepath):
-                if mode == 0:
-                    res = self.ExtractMod(self, filepath, targetdir=targetdir, basedir=basedir)
-                elif mode == 1:
-                    res = self.TestMod(filepath, modname=data['ID'], basedir=basedir)
-                else:
-                    logging.error('Unexpected argument for mode')
-                    return 0
+                res = self.TestMod(filepath, modname=data['ID'], basedir=basedir)
                 results.append(res)
             else:
                 logging.warning("{} doesn't exist!".format(filepath))
                 results.append(2)
                 continue
-            logging.info('{} went fine for {} : {}'.format(txtdict[mode][0], data['ID'], filename))
+            logging.info('{} went fine for {} : {}'.format(txtdict[1][0], data['ID'], filename))
         assert len(results) == len(ToExt)
-        return results
-
-    def TestMods(self, ToTest, dldir=None):
-        '''
-        -1:Manual
-        0:CalledProcessError
-        1:Success
-        2:File doesn't exist
-        3:Test found errors
-        :param ToTest:
-        :param dldir:
-        :return:
-        '''
-        if dldir is None:
-            dldir = self.dldir
-
-        results = []
-        for i in ToTest:
-            logging.info('Testing {} : {}'.format(i['ID'],i['Save']))
-            filename = i['Save']
-            filepath = dldir + '/' + filename
-            if filename=="Manual":
-                results.append(-1)
-                logging.warning('Skipping {} : {}'.format(i['ID'],filepath))
-                continue
-
-            if os.path.exists(filepath):
-                regexlist = [rb'(?:[^\r\n\t\f\v /]+/)*(?:[sS][eE][tT][uU][pP]-)?(?P<tpname>[^\r\n\t\f\v /]*?)\.[Tt][Pp]2',
-                             rb'((?:[^\r\n\t\f\v /]+?/)*?)(%(tpname)s)(?=\r?$)(?m)']
-
-                res=Extract.Check_Archive(filepath,basedir=self.dir, regex=regexlist)
-
-                if isinstance(res, int):
-                    if res==0:
-                        results.append(0) #Test failed
-                    elif res==3:
-                        results.append(3) #Test found inconsistency
-                else:
-                    results.append({'tpname':res[0][0],'foldpath':res[1][0]})
-            else:
-                logging.warning("{} doesn't exist!".format(filepath))
-                results.append(2)
-                continue
-            logging.info("{} : {} is fine".format(i['ID'], filepath))
-
-        assert len(results)==len(ToTest)
-        return results
-
-    def ExtractMods(self, ToExt, srcdir=None, targetdir=None):
-        '''
-        -1:Manual
-        0:CalledProcessError
-        1:Success
-        2:File doesn't exist
-        3:Test found errors
-        :param ToExt:
-        :param srcdir:
-        :return:
-        '''
-        if srcdir is None:
-            srcdir = self.dldir
-        if targetdir is None:
-            targetdir = self.dir + '/Extracted'
-
-        results = []
-        for i in ToExt:
-            logging.info('Extracting {} : {}'.format(i['ID'],i['Save']))
-            filename = i['Save']
-            filepath = srcdir + '/' + filename
-            if filename == "Manual":
-                results.append(-1)
-                logging.warning('Skipping {} : {}'.format(i['ID'],filepath))
-                continue
-
-            if os.path.exists(filepath):
-                try:
-                    results.append(Extract.Extract_Archive(filepath, targetdir=targetdir, basedir=self.dir))
-                except subprocess.CalledProcessError:
-                    logging.exception('Error in file {}'.format(filepath))
-                    results.append(0)
-                    continue
-
-            else:
-                logging.warning("{} doesn't exist!".format(filepath))
-                results.append(2)
-                continue
-            logging.info("{} : {} is fine".format(i['ID'], filepath))
-
-        assert len(results)==len(ToExt)
         return results
 
     #for very special cases
     DataPDict ={}
     #for when there's a second archive inside the first
-    SecArcPat = re.compile(r'^((?:[^\r\n\t\f\v/]+?/)*?(?:[^\r\n\t\f\v/]+?\.(?:exe|zip|rar|7z)))$(?im)')
+    SecArcPat = re.compile(r'^(/?(?:[^\r\n\t\f\v/]+?/)*?(?:[^\r\n\t\f\v/]+?\.(?:exe|zip|rar|7z)))$(?im)')
 
     def PrepMod(self, filepath, moddict, targetdir=None, tmpdir=None, basedir=None):
         '''
@@ -391,8 +266,11 @@ class BWS:
         if basedir is None:
             basedir = self.dir
         if tmpdir is None:
-            tmpdirobj = tempfile.TemporaryDirectory(prefix=self.tmpdir + '/')
-            tmpdir = tmpdirobj.name
+            tmpdir=self.tmpdir
+
+        tmpdirobj = tempfile.TemporaryDirectory(prefix=tmpdir + '/')
+        tmpdir = tmpdirobj.name
+
         if targetdir is None:
             targetdir = self.gamedir
 
@@ -411,7 +289,7 @@ class BWS:
         ID = moddict['ID']
         files = Utils.listsubdir(tmpdir)
 
-        tp2Pat = re.compile(r"((?:[^\r\n\t\f\v/]+?/)*?(?:setup-)?{}.tp2)$(?mi)".format(ID))
+        tp2Pat = re.compile(r"(^/?(?:[^\r\n\t\f\v/]+?/)*?(?:setup-)?{}.tp2)$(?mi)".format(ID))
         logging.info('tp2pat is {}'.format(tp2Pat))
         s = '\n'.join(files)
         tp2match = tp2Pat.search(s)
@@ -443,7 +321,7 @@ class BWS:
         if tp2path.split('/')[-2].lower() == ID.lower():
             datapath = tp2path.rsplit('/', 1)[0]
         else:
-            dataPat = re.compile(r"((?:[^\r\n\t\f\v/]+?/)*?(?:(?<=/)|(?<=^))({}))(?(2)|backup)$(?mi)".format(ID))
+            dataPat = re.compile(r"(^/?(?:[^\r\n\t\f\v/]+?/)*?(?:(?<=/)|(?<=^))({}))(?(2)|backup)$(?mi)".format(ID))
             logging.info("dataPat is {}".format(dataPat))
             datamatch = dataPat.search(s)
             if datamatch:
@@ -462,7 +340,7 @@ class BWS:
                     tmps = tmps.split(b'~')[1].decode()
                     logging.debug('tmps is {}'.format(tmps))
                     tmps = tmps.rsplit('/', 1)[0]
-                    dataPat = re.compile(r"((?:[^\r\n\t\f\v/]+?/)*?{})$(?mi)".format(tmps.rsplit('/', 1)[0]))
+                    dataPat = re.compile(r"^(/?(?:[^\r\n\t\f\v/]+?/)*?{})$(?mi)".format(tmps.rsplit('/', 1)[0]))
                     logging.info('New dataPat is {}'.format(dataPat))
                     datapath = dataPat.search(s).group(1)
                 else:
@@ -473,7 +351,7 @@ class BWS:
 
         if datapath in tp2path:
             src = datapath.rsplit('/', 1)[0]
-            Utils.MergeFolderTo(src, targetdir)
+            res = Utils.MergeFolderTo(src, targetdir)
         else:
             src = datapath.rsplit('/', 1)[0]
             res = Utils.MergeFolderTo(src, targetdir)
@@ -488,17 +366,35 @@ class BWS:
 
         return res
 
+    def PrepMods(self, ToPrep, dldir=None, targetdir=None, tmpdir=None, basedir=None, ModsData=None):
+        if dldir is None:
+            dldir = self.dldir
+        if targetdir is None:
+            targetdir = self.gamedir
+        if tmpdir is None:
+            tmpdir = self.tmpdir
+        if basedir is None:
+            basedir = self.dir
+        if ModsData is None:
+            ModsData = self.ModsData
+
+        return [self.PrepMod(dldir + '/' + ModsData[i]['Save'], ModsData[i], tmpdir=tmpdir, targetdir=targetdir,
+                             basedir=basedir) for i in ToPrep]
+
     def No_GUI_loop(self, file, start=0, end=-1):
         self.LoadModsData(file)
-        WorkingInds = range(start, end if end!=-1 else len(self.ModsData))
+        loaded = len(self.ModsData)
+        WorkingInds = range(start, end if end != -1 else len(self.ModsData))
+        selected = len(WorkingInds)
         m = self.DownloadMods(WorkingInds)
         #m = self.TestPresentMods(ToTest=WorkingInds)
         NewInds = [i for i,v in zip(WorkingInds,m) if v == 1]
+        downloaded = len(NewInds)
         #n = self.ExtMods(NewInds, mode=1)
         Utils.cleanupdir(self.tmpdir)
-
-        n = [self.PrepMod(self.dldir + '/' + self.ModsData[i]['Save'],self.ModsData[i],
-                          targetdir=self.gamedir, basedir=self.dir) for i in NewInds]
+        n = self.PrepMods(NewInds, dldir=self.dldir, targetdir=self.gamedir, basedir=self.dir, ModsData=self.ModsData)
+        extracted = len([i for i in n if isinstance(i, tuple)])
+        logging.info("{} mods loaded, {} selected, {} downloaded or found, {} properly extracted".format(loaded, selected, downloaded, extracted))
         return m, n
 
 
