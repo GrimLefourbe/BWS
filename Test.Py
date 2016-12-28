@@ -1,6 +1,7 @@
 import cProfile
 import BWS
 import Weidu
+import ModInfo
 
 if __name__ == '__main__':
     P=cProfile.Profile()

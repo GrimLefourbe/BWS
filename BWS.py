@@ -93,8 +93,22 @@ class BWS:
                 else:
                     logging.warning('No size specified')
             self.ModsData += ModsData
+            return self.ModsData
         else:
             logging.warning("{} is not a file".format(inifile))
+
+    def LoadModsComponents(self, inifile=None, ModsData=None):
+        if inifile is None:
+            inifile = self.config + '/WeiDU-EN.ini'
+        if ModsData is None:
+            ModsData = self.ModsData
+        if os.path.isfile(inifile):
+            logging.info('Loading components from {}'.format(inifile))
+            ModInfo.ModComp(inifile, ModsData=ModsData)
+            logging.info('Done loading components')
+        else:
+            logging.warning("{} is not a file".format(inifile))
+        return ModsData
 
     def DeleteMods(self, ToDel, dldir=None):
         '''
@@ -385,6 +399,7 @@ class BWS:
     def No_GUI_loop(self, file, start=0, end=-1):
         self.LoadModsData(file)
         loaded = len(self.ModsData)
+        self.ModsData = self.LoadModsComponents(self.config + '/WeiDU-EN.ini')
         WorkingInds = range(start, end if end != -1 else len(self.ModsData))
         selected = len(WorkingInds)
         m = self.DownloadMods(WorkingInds)

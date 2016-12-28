@@ -20,7 +20,7 @@ def ModList_old(filename):
 
 def ModList(filename):
     P = configparser.ConfigParser(interpolation=None)
-    P.optionxform = lambda x:x
+    P.optionxform = lambda x: x
     with open(filename) as f:
         P.read_file(f)
     ModsData = []
@@ -31,4 +31,26 @@ def ModList(filename):
         d = dict(i)
         d['ID'] = i.name
         ModsData.append(d)
+    return ModsData
+
+def ModComp(filename, ModsData=None):
+    P = configparser.ConfigParser(interpolation=None)
+    P.optionxform = lambda x: x
+    with open(filename) as f:
+        P.read_file(f)
+
+    if ModsData is None:
+        return P
+    for d in ModsData:
+        complist = []
+        try:
+            c = P[d['ID']]
+            for k, v in c.items():
+                if k == "Tra":
+                    continue
+
+                complist.append((k, v))
+        except KeyError:
+            continue
+        d["Comp"] = complist
     return ModsData
