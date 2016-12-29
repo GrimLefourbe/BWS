@@ -71,16 +71,17 @@ class BWS:
         self.ModsData = []
 
         if no_gui:
-            inifile = self.config + r'/BG2EE.ini'
+            inifile = self.config + r'/ModList-BG2EE.ini'
             self.No_GUI_loop(inifile, start=start, end=end)
+    def dummytest(self, argtest):
+        print(argtest)
     def LoadModsData(self, inifile=None):
         if inifile is None:
             inifile = self.dir + '/Mod.ini'
-
         if os.path.isfile(inifile):
 
             logging.info('Loading {}'.format(inifile))
-            ModsData=ModInfo.ModList(inifile)
+            ModsData = ModInfo.ModList(inifile)
             logging.info('{} mods loaded'.format(len(ModsData)))
 
             for i in ModsData:
