@@ -73,8 +73,10 @@ class BWS:
         if no_gui:
             inifile = self.config + r'/ModList-BG2EE.ini'
             self.No_GUI_loop(inifile, start=start, end=end)
-    def dummytest(self, argtest):
-        print(argtest)
+    def Indexes(self, ModsData=None):
+        if ModsData is None:
+            ModsData = self.ModsData
+        return {i['ID']: n for n, i in enumerate(ModsData)}
     def LoadModsData(self, inifile=None):
         if inifile is None:
             inifile = self.dir + '/Mod.ini'
@@ -154,7 +156,7 @@ class BWS:
 
         return results
 
-    def DownloadMods(self, ToDl, dldir=None, ModsData=None):
+    def DownloadMods(self, ToDl, dldir=None, ModsData=None, reporthooks = None):
         '''
         ModsToDl should be a list of dicts with entries for Save, Down and Size
         Size can be None, it will then be ignored
@@ -164,11 +166,13 @@ class BWS:
         '''
         if ModsData is None:
             ModsData=self.ModsData
+        if reporthooks == None:
+            reporthooks = [None] * len(ToDl)
         if dldir is None:
             dldir = self.dldir
 
         results = []
-        for ind in ToDl:
+        for ind, hook in zip(ToDl, reporthooks):
             data=ModsData[ind]
             url, filename, expsize = data['Down'], data['Save'], data['Size']
             if url == "Manual" or filename == "Manual":
@@ -177,7 +181,7 @@ class BWS:
                 continue
 
             logging.info('Starting download of {} from {}'.format(filename, url))
-            code, size = Net.DownloadFile(url.rstrip('/'), dldir + '/' + filename)
+            code, size = Net.DownloadFile(url.rstrip('/'), dldir + '/' + filename, reporthook=hook)
 
             if code != 200:
                 logging.warning('Received {} code when downloading file {} from {}'.format(code, filename, url))

@@ -27,7 +27,6 @@ def ModList(filename):
     iterP = iter(P.values())
     iterP.__next__()
     for i in iterP: #this excludes the DEFAULT section
-        print(i)
         d = dict(i)
         d['ID'] = i.name
         ModsData.append(d)
