@@ -5,6 +5,7 @@ import os
 import logging
 import threading
 import queue
+import ReaderThread
 import Weidu
 
 class BWS_GUI:
@@ -114,7 +115,7 @@ class BWS_GUI:
         taskstextfunc = self.ProgressRep.tasks
 
         for i in range(len(WorkingSelection)):
-            taskstextfunc[i+len(self.SelectedMods)+len(self.DownloadedMods)]("Test")
+            taskstextfunc[i+len(self.SelectedMods)+len(self.DownloadedMods)]("In progress")
 
         ToInst = [(ind, [i[0] for i in comps]) for ind, name, comps in WorkingSelection]
         logging.info("ToInst : {}".format(ToInst))
@@ -125,41 +126,37 @@ class BWS_GUI:
         logging.info("Thread started")
         inp = self.ProgressRep.inp
         out = self.ProgressRep.out
+        TReader = q.get()
+        self.ProgressRep.setOutStream(TReader)
+        stdin = q.get()
+        stdinstream = open(stdin, 'wb')
+        self.ProgressRep.setInStream(stdinstream)
         res = []
-        sockets = []
         for i in range(len(WorkingSelection)):
             while True:
                 try:
                     res.append(q.get(block=False))
-                    res.append(q.get())
                 except queue.Empty:
-                    self.app.processEvents()
-                else:
-                    logging.debug("Got a popen item, starting socketnotifier")
-                    w = res[-2]
-                    f = res[-1]
                     try:
-                        socket = Core.QSocketNotifier(f.fileno(), Core.QSocketNotifier.Read, self.app)
-                    except:
-                        logging.exception('!')
-                        sys.exit(1)
-                    sockets.append(socket)
-                    logging.debug("Socket Created")
-                    self.ProgressRep.setOutStream(w.stdout)
-                    logging.debug("OutStream set")
-                    self.ProgressRep.setInStream(w.stdin)
-                    logging.debug("InStream set")
-                    socket.setEnabled(True)
-                    try:
-                        socket.activated.connect(self.ProgressRep.onOutAvailable)
+                        self.app.processEvents()
+                    #logging.info("In stock : {}".format(TReader.instock()))
+                        if TReader.instock():
+                            self.ProgressRep.onOutAvailable()
                     except:
                         logging.exception("!")
                         sys.exit(1)
-                    print(socket.isSignalConnected(Core.QMetaMethod()))
-                    logging.debug("Socket activated")
+                else:
+                    logging.debug("Got a popen item")
+                    logging.info("Updating old task")
+                    if i > 0:
+                        taskstextfunc[len(self.SelectedMods)+len(self.DownloadedMods)+i-1]("Done!")
+                    w = res[-1]
                     break
-        while res[-1].poll():
+        while res[-1].poll() is None:
             self.app.processEvents()
+            if TReader.instock():
+                self.ProgressRep.onOutAvailable()
+        taskstextfunc[-1]("Done!")
 
 
     def closeEvent(self, event):
@@ -273,6 +270,8 @@ class ProgressReport(Widg.QWidget):
         out = self.out = Widg.QPlainTextEdit(parent=self)
         inp = self.inp = Widg.QLineEdit(parent=self)
         inbtn = self.inbtn = Widg.QPushButton(parent=self)
+        inbtn.setText("Send")
+        inbtn.clicked.connect(self.onClick)
         table.setWindowTitle("On-going tasks")
         self.tasks = []
         self.ccount = colcount + 1 #last column is for progress report
@@ -311,16 +310,18 @@ class ProgressReport(Widg.QWidget):
     def setInStream(self, stream):
         self.InStream = stream
 
-    #@Core.pyqtSlot()
     def onOutAvailable(self):
-        logging.info("Getting sender")
-        sender = self.sender()
-        sender.setEnabled(0)
-        logging.info("Sender disabled")
-        self.out.appendPlainText(self.OutStream.read())
-        logging.info("Enabling Sender")
-        sender.setEnabled(1)
+        s = self.OutStream.read().decode()
+        logging.info("Read from stream : {}".format(s))
+        try:
+            self.out.appendPlainText(s)
+        except:
+            logging.exception('!')
+            sys.exit(1)
 
+    def onClick(self):
+        self.InStream.write(self.inp.text().encode())
+        self.InStream.flush()
 
     def toggleInOut(self):
         if self.out.isHidden():

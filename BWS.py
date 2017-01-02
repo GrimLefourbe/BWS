@@ -7,11 +7,11 @@ import sys
 import time
 import re
 import logging
-import subprocess
 import shutil
 import stat
 import tempfile
 import Weidu
+import ReaderThread
 
 #NTotSC 2 in 1??
 
@@ -125,22 +125,27 @@ class BWS:
             ModsData = self.ModsData
         if gamedir is None:
             gamedir = self.gamedir
-
         res = []
+        if queue is not None:
+            RThread = ReaderThread.ReaderThread(endtag=b"BWS$")
+            r, w = RThread.getfds()
+            queue.put(RThread)
+            inr, inw = os.pipe()
+            queue.put(inw)
+            RThread.start()
+        else:
+            r, w, inr, inw = (None,)*4
         for ind, comps in ToInst:
             ID = ModsData[ind]['ID']
-            if queue is not None:
-                f = open(gamedir+ 'tmppipe', 'w+')
-                print(f.fileno())
             CompToInst = [number.lstrip('@') for number in comps]
             logging.info("Installing components {}".format(CompToInst))
-            w = weidu.Install_mod(tpname=ID, ToIns=CompToInst, gamepath=gamedir, stdout = f.fileno() if queue is not None else None)
+            pop = weidu.Install_mod(tpname=ID, ToIns=CompToInst, gamepath=gamedir, stdin=inr, stdout=w)
             if queue is not None:
-                queue.put(w)
-                queue.put(f)
-            w.wait()
-            res.append(w)
-            f.close()
+                queue.put(pop)
+            pop.wait()
+            #time.sleep(5)
+            logging.info("Done waiting, going to next popen")
+            res.append(pop)
         return res
 
 

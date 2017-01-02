@@ -10,10 +10,12 @@ import logging
 if __name__ == '__main__':
     P=cProfile.Profile()
     #P.enable()
-    app = QtWidgets.QApplication(sys.argv)
-    T = BWS_GUI.BWS_GUI(app=app)
+    try:
+        app = QtWidgets.QApplication(sys.argv)
+        T = BWS_GUI.BWS_GUI(app=app)
     #T = BWS.BWS(no_gui=False)
-    W = Weidu.Weidu_Handler(weidupath="C:/Coding/Python workshop/BWS/Game/weidu.exe", gamepath="C:/Coding/Python workshop/BWS/Game")
-
+        W = Weidu.Weidu_Handler(weidupath="C:/Coding/Python workshop/BWS/Game/weidu.exe", gamepath="C:/Coding/Python workshop/BWS/Game")
+    except:
+        logging.exception("!")
     #P.disable()
     #P.print_stats()

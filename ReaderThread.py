@@ -2,6 +2,7 @@ import os
 import threading
 import io
 import sys
+import logging
 
 class ReaderThread(threading.Thread):
     def __init__(self, piperead = None, pipewrite=None, endtag=b'', outstream=None, group=None, name=None, daemon=None):
@@ -31,6 +32,7 @@ class ReaderThread(threading.Thread):
         self.go = threading.Event()
         self.go.set()
         self.sent = threading.Event()
+        self.sent.clear()
         self.n = 0
         self.lastn = 0
 
@@ -46,12 +48,20 @@ class ReaderThread(threading.Thread):
 
     def work(self):
         for l in self.filer:
-            self.n += self.outstream.write(l)
-            self.sent.set()
-            self.go.wait()
-            self.sent.clear()
+            if not self.go.is_set():
+                while self.tag not in l:
+                    self.n += self.outstream.write(l)
+                    l = self.filer.readline()
+                print("found tag")
+                self.n += self.outstream.write(l)
+                self.sent.set()
+                self.go.wait()
+                self.sent.clear()
+            else:
+                self.n += self.outstream.write(l)
             if self.die:
                 break
+        logging.info("Work done, good bye")
         self.outstream.close()
         self.filer.close()
         self.filew.close()
@@ -66,8 +76,6 @@ class ReaderThread(threading.Thread):
             return ''
         if not self.n:
             return None
-        s = sys.getswitchinterval()
-        sys.setswitchinterval(1000)
         self.go.clear()
         self.filew.write(self.tag)
         self.filew.flush()
@@ -78,7 +86,6 @@ class ReaderThread(threading.Thread):
         self.outstream.seek(0)
         n = self.n
         self.n = 0
-        sys.setswitchinterval(s)
         self.go.set()
 
         return b[:i] + b[i+len(self.tag):n]
