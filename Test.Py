@@ -5,6 +5,7 @@ import ModInfo
 import BWS_GUI
 from PyQt5 import QtWidgets
 import sys
+import logging
 
 if __name__ == '__main__':
     P=cProfile.Profile()

@@ -17,6 +17,13 @@ def FindTP2path(tpname, gamefolder):
         return t
     return 0
 
+def formatComp(compstring : str):
+    try:
+        int(compstring.lstrip('@'))
+    except ValueError:
+        return ''
+    return compstring.lstrip('@')
+
 class Weidu_Handler:
     def __init__(self, weidupath, gamepath, lang=None):
         self.weidupath = weidupath
@@ -41,29 +48,37 @@ class Weidu_Handler:
             stdout = subprocess.PIPE
         if stderr is None:
             stderr = subprocess.PIPE
+        elif stderr is 1:
+            stderr = subprocess.STDOUT
 
         command = [weidupath, tppath, "--language", lang, "--no-exit-pause"]
         if ToIns is not None and len(ToIns) != 0:
             command.append("--force-install-list")
-            command += [str(i) for i in ToIns]
+            for i in ToIns:
+                t = formatComp(i)
+                if t != '':
+                    command.append(t)
         if ToUnins is not None and len(ToUnins) != 0:
             command.append("--force-uninstall-list")
-            command += [str(i) for i in ToUnins]
+            for i in ToUnins:
+                t = formatComp(i)
+                if t != '':
+                    command.append(t)
 
         for i in weiduargs:
             command.append(str(i))
 
         logging.info("Command is {}".format(command))
 
-        w = subprocess.Popen(command, cwd=gamepath, **popenargs)
+        w = subprocess.Popen(command, cwd=gamepath, stdin=stdin, stdout=stdout, stderr=stderr, **popenargs)
 
         logging.info("Popen object created")
 
         return w
 
 
-    def Install_mod(self, tpname, ToIns=None, ToUnins=None, lang=None, stdin=None, stdout=None, stderr=None,
-                    gamepath=None, weidupath=None):
+    def Install_mod(self, tpname, ToIns = None, ToUnins = None, lang = None, stdin = None, stdout = None, stderr = None,
+                    gamepath = None, weidupath = None):
         if lang is None:
             lang = "0"
         if weidupath is None:
@@ -76,6 +91,8 @@ class Weidu_Handler:
             stdout = subprocess.PIPE
         if stderr is None:
             stderr = subprocess.PIPE
+        elif stderr is 1:
+            stderr = subprocess.STDOUT
 
 
         logging.info("Preparing install of {}".format(tpname))
@@ -83,5 +100,4 @@ class Weidu_Handler:
         logging.info("Found tppath is {}".format(tppath))
         w = self.ExecTP2(tppath, lang, ToIns=ToIns, ToUnins=ToUnins, stdin=stdin, stdout=stdout, stderr=stderr,
                          gamepath=gamepath, weidupath=weidupath)
-        w.wait(timeout=60)
         return w

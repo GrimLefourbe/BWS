@@ -3,12 +3,16 @@ import sys
 from PyQt5 import QtGui as Gui, QtWidgets as Widg, QtCore as Core
 import os
 import logging
+import threading
+import queue
+import Weidu
 
 class BWS_GUI:
     def __init__(self, app=None, PicDir = None):
         if app is not None:
             self.app = app
         self.BWS = BWS.BWS(no_gui=False)
+        self.weidu = self.BWS.weidu
 
         self.dir = self.BWS.dir
         if PicDir is None:
@@ -17,6 +21,8 @@ class BWS_GUI:
             self.PicDir = PicDir
         self.config = self.BWS.config
         MWindow = self.MWindow =  Widg.QMainWindow()
+        self.height = 600
+        self.width = 600
 
 
         MWindow.setWindowTitle("Big World Setup")
@@ -31,6 +37,7 @@ class BWS_GUI:
         MWindow.show()
         app.exec_()
 
+
     def OnGameSelect(self, selectedpath):
         self.selectedpath = selectedpath
         print(selectedpath)
@@ -41,40 +48,118 @@ class BWS_GUI:
         print(Comps)
         self.ModSelect.load(Comps=Comps)
         self.ModSelect.show()
-        self.ModSelect.resize(400, 400)
-        self.MWindowCtr.resize(400, 400)
-        self.MWindow.resize(400, 400)
+        self.ModSelect.resize(self.width, self.height)
+        self.MWindowCtr.resize(self.width, self.height)
+        self.MWindow.resize(self.width, self.height)
 
     def OnModSelect(self, selectedmods):
         self.selectedmods = selectedmods
-        selection = []
+        self.IDtorowIndex = self.BWS.Indexes()
+
+        WorkingSelection = []
         for ID, comps in selectedmods:
             chosencomps = [i for i in comps if i[1] == 2]
             if len(chosencomps) == 0:
                 continue
-            selection.append((ID, chosencomps))
-        logging.info("Selection : {}".format(selection))
+            WorkingSelection.append((self.IDtorowIndex[ID], ID, chosencomps))
+
+        self.SelectedMods = WorkingSelection
+        logging.info("Selection : {}".format(WorkingSelection))
         self.ModSelect.hide()
 
         self.ProgressRep = ProgressReport(parent=self.MWindowCtr)
-        self.ProgressRep.load([("Downloading {}".format(i[0]),) for i in selection] + [("Extracting {}".format(i[0]),) for i in selection])
-        logging.info("ProgressRep loaded")
+        self.ProgressRep.load([("Downloading {}".format(i[1]),) for i in WorkingSelection])
+        logging.info("ProgressRep loaded with downloads")
         self.ProgressRep.show()
-        self.ProgressRep.resize(400,400)
+        self.ProgressRep.resize(self.width, self.height)
 
-        taskstextfunc = self.ProgressRep.tasks
-        rephooks = []
         logging.info("Starting creation of rephooks")
-        for func in taskstextfunc[:len(selection)]:
+
+        def rephookfactory(func):
             def f(n):
-                print(n)
-                func("test")
-            rephooks.append(f)
+                self.app.processEvents()
+                func("{} kb".format(n/1000))
+            return f
+
+        rephooks = [rephookfactory(f) for f in self.ProgressRep.tasks]
+
         logging.info("Done creating rephooks")
+        Downloaded = self.BWS.DownloadMods([i[0] for i in WorkingSelection], reporthooks=rephooks)
 
-        self.IDtorowIndex = self.BWS.Indexes()
+        self.DownloadedMods = WorkingSelection = [i for i, v in zip(WorkingSelection, Downloaded) if v == 1]
+        self.ProgressRep.load([("Extracting {}".format(i[1]),) for i in WorkingSelection])
+        taskstextfunc = self.ProgressRep.tasks
+        logging.info("Starting preparation")
+        q=queue.Queue()
+        t = threading.Thread(target=self.BWS.PrepMods, args=([i[0] for i in WorkingSelection],), kwargs={"queue": q})
+        t.start()
 
-        #self.BWS.DownloadMods([self.IDtorowIndex[i[0]] for i in selection],reporthooks=rephooks)
+
+        res = []
+        logging.info("Waiting for preparation")
+        for i in range(len(WorkingSelection)):
+            while True:
+                try:
+                    res.append(q.get(block=False))
+                except queue.Empty:
+                    self.app.processEvents()
+                else:
+                    taskstextfunc[i + len(self.SelectedMods)]("Done")
+                    print(res[-1])
+                    break
+        logging.info("Setting new tasks for install")
+        self.ExtractedMods = WorkingSelection = [i for i, v in zip(WorkingSelection, res) if v[0] == 1]
+        self.ProgressRep.load([("Installing {}".format(i[1]),) for i in WorkingSelection])
+        self.ProgressRep.toggleInOut()
+        taskstextfunc = self.ProgressRep.tasks
+
+        for i in range(len(WorkingSelection)):
+            taskstextfunc[i+len(self.SelectedMods)+len(self.DownloadedMods)]("Test")
+
+        ToInst = [(ind, [i[0] for i in comps]) for ind, name, comps in WorkingSelection]
+        logging.info("ToInst : {}".format(ToInst))
+        logging.info("Creating thread")
+        t = threading.Thread(target=self.BWS.InstallMods, kwargs={"ToInst": ToInst, "queue": q})
+        t.start()
+
+        logging.info("Thread started")
+        inp = self.ProgressRep.inp
+        out = self.ProgressRep.out
+        res = []
+        sockets = []
+        for i in range(len(WorkingSelection)):
+            while True:
+                try:
+                    res.append(q.get(block=False))
+                    res.append(q.get())
+                except queue.Empty:
+                    self.app.processEvents()
+                else:
+                    logging.debug("Got a popen item, starting socketnotifier")
+                    w = res[-2]
+                    f = res[-1]
+                    try:
+                        socket = Core.QSocketNotifier(f.fileno(), Core.QSocketNotifier.Read, self.app)
+                    except:
+                        logging.exception('!')
+                        sys.exit(1)
+                    sockets.append(socket)
+                    logging.debug("Socket Created")
+                    self.ProgressRep.setOutStream(w.stdout)
+                    logging.debug("OutStream set")
+                    self.ProgressRep.setInStream(w.stdin)
+                    logging.debug("InStream set")
+                    socket.setEnabled(True)
+                    try:
+                        socket.activated.connect(self.ProgressRep.onOutAvailable)
+                    except:
+                        logging.exception("!")
+                        sys.exit(1)
+                    print(socket.isSignalConnected(Core.QMetaMethod()))
+                    logging.debug("Socket activated")
+                    break
+        while res[-1].poll():
+            self.app.processEvents()
 
 
     def closeEvent(self, event):
@@ -185,6 +270,9 @@ class ProgressReport(Widg.QWidget):
         super().__init__(parent)
         self.grid = Widg.QGridLayout()
         table = self.table = Widg.QTableWidget(parent=self)
+        out = self.out = Widg.QPlainTextEdit(parent=self)
+        inp = self.inp = Widg.QLineEdit(parent=self)
+        inbtn = self.inbtn = Widg.QPushButton(parent=self)
         table.setWindowTitle("On-going tasks")
         self.tasks = []
         self.ccount = colcount + 1 #last column is for progress report
@@ -193,7 +281,14 @@ class ProgressReport(Widg.QWidget):
         if tasks is not None:
             self.load(tasks=tasks)
 
-        self.grid.addWidget(table)
+        out.hide()
+        inp.hide()
+        inbtn.hide()
+        self.grid.addWidget(table, 0, 0, 1, 5)
+        self.grid.addWidget(out, 1, 0, 1, 5)
+        self.grid.addWidget(inp, 2, 0, 1, 4)
+        self.grid.addWidget(inbtn, 2, 4, 1, 1)
+        self.grid.setSpacing(10)
         self.setLayout(self.grid)
         table.show()
 
@@ -209,3 +304,57 @@ class ProgressReport(Widg.QWidget):
             self.tasks.append(item.setText)
             table.setItem(row + self.rcount, self.ccount-1, item)
         table.show()
+        self.rcount = table.rowCount()
+
+    def setOutStream(self, stream):
+        self.OutStream = stream
+    def setInStream(self, stream):
+        self.InStream = stream
+
+    #@Core.pyqtSlot()
+    def onOutAvailable(self):
+        logging.info("Getting sender")
+        sender = self.sender()
+        sender.setEnabled(0)
+        logging.info("Sender disabled")
+        self.out.appendPlainText(self.OutStream.read())
+        logging.info("Enabling Sender")
+        sender.setEnabled(1)
+
+
+    def toggleInOut(self):
+        if self.out.isHidden():
+            self.out.show()
+            self.inp.show()
+            self.inbtn.show()
+        else:
+            self.out.hide()
+            self.inp.hide()
+            self.inbtn.hide()
+
+class Starter(Core.QObject):
+    def __init__(self, func, *args, **kwargs):
+        super().__init__()
+        self.f = func
+        self.args = args
+        self.kwargs = kwargs
+    @Core.pyqtSlot()
+    def run(self, some_string_arg):
+        self.f(*self.args, **self.kwargs)
+
+class GenericWorker(Core.QObject):
+
+    start = Core.pyqtSignal(str)
+    finished = Core.pyqtSignal()
+
+    def __init__(self, function, *args, **kwargs):
+        super(GenericWorker, self).__init__()
+        self.function = function
+        self.args = args
+        self.kwargs = kwargs
+        self.start.connect(self.run)
+
+    @Core.pyqtSlot()
+    def run(self, *args, **kwargs):
+        self.function(*self.args, **self.kwargs)
+        self.finished.emit()

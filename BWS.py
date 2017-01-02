@@ -11,7 +11,7 @@ import subprocess
 import shutil
 import stat
 import tempfile
-
+import Weidu
 
 #NTotSC 2 in 1??
 
@@ -35,7 +35,7 @@ def loginit(logdir):
 
 class BWS:
     def __init__(self, dir=None, dldir=None, logsdir=None, no_gui=True, configdir=None, tmpdir=None, gamedir=None,
-                 start=0, end=-1):
+                 weidu=None, start=0, end=-1):
         if dir is None:
             self.dir = sys.path[0].replace('\\', '/')
         else:
@@ -61,6 +61,10 @@ class BWS:
             self.gamedir = self.dir + '/Game'
         else:
             self.gamedir = gamedir
+        if weidu is None:
+            self.weidu = Weidu.Weidu_Handler(self.dir + '/Tools/weidu.exe', gamepath=self.gamedir, lang="en")
+        else:
+            self.weidu = weidu
         os.makedirs(self.tmpdir, exist_ok=True)
         os.makedirs(self.config, exist_ok=True)
         os.makedirs(self.dldir, exist_ok=True)
@@ -77,6 +81,7 @@ class BWS:
         if ModsData is None:
             ModsData = self.ModsData
         return {i['ID']: n for n, i in enumerate(ModsData)}
+
     def LoadModsData(self, inifile=None):
         if inifile is None:
             inifile = self.dir + '/Mod.ini'
@@ -112,6 +117,34 @@ class BWS:
         else:
             logging.warning("{} is not a file".format(inifile))
         return ModsData
+
+    def InstallMods(self, ToInst, ModsData=None, weidu=None, gamedir=None, queue=None):
+        if weidu is None:
+            weidu = self.weidu
+        if ModsData is None:
+            ModsData = self.ModsData
+        if gamedir is None:
+            gamedir = self.gamedir
+
+        res = []
+        for ind, comps in ToInst:
+            ID = ModsData[ind]['ID']
+            if queue is not None:
+                f = open(gamedir+ 'tmppipe', 'w+')
+                print(f.fileno())
+            CompToInst = [number.lstrip('@') for number in comps]
+            logging.info("Installing components {}".format(CompToInst))
+            w = weidu.Install_mod(tpname=ID, ToIns=CompToInst, gamepath=gamedir, stdout = f.fileno() if queue is not None else None)
+            if queue is not None:
+                queue.put(w)
+                queue.put(f)
+            w.wait()
+            res.append(w)
+            f.close()
+        return res
+
+
+
 
     def DeleteMods(self, ToDel, dldir=None):
         '''
@@ -386,7 +419,7 @@ class BWS:
 
         return res
 
-    def PrepMods(self, ToPrep, dldir=None, targetdir=None, tmpdir=None, basedir=None, ModsData=None):
+    def PrepMods(self, ToPrep, dldir=None, targetdir=None, tmpdir=None, basedir=None, ModsData=None, queue=None):
         if dldir is None:
             dldir = self.dldir
         if targetdir is None:
@@ -398,8 +431,12 @@ class BWS:
         if ModsData is None:
             ModsData = self.ModsData
 
-        return [self.PrepMod(dldir + '/' + ModsData[i]['Save'], ModsData[i], tmpdir=tmpdir, targetdir=targetdir,
-                             basedir=basedir) for i in ToPrep]
+        if queue is None:
+            return [self.PrepMod(dldir + '/' + ModsData[i]['Save'], ModsData[i], tmpdir=tmpdir, targetdir=targetdir,
+                                 basedir=basedir) for i in ToPrep]
+        for i in ToPrep:
+            queue.put(self.PrepMod(dldir + '/' + ModsData[i]['Save'], ModsData[i], tmpdir=tmpdir, targetdir=targetdir, basedir=basedir))
+
 
     def No_GUI_loop(self, file, start=0, end=-1):
         self.LoadModsData(file)
