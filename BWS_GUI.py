@@ -43,7 +43,7 @@ class BWS_GUI:
         self.selectedpath = selectedpath
         print(selectedpath)
         self.BWS.LoadModsData(inifile=selectedpath)
-        self.BWS.LoadModsComponents(inifile=selectedpath.rsplit('/', 1)[0] + '/WeiDu-EN.ini')
+        self.BWS.LoadModsComponents(inifile=selectedpath.rsplit('/', 1)[0] + '/WeiDU-EN.ini')
         self.IniSelect.hide()
         Comps = [(M['Name'], [(i[1], i[0], 32) for i in M['Comp']], M['ID']) for M in self.BWS.ModsData if 'Comp' in M]
         print(Comps)

@@ -21,11 +21,11 @@ ext_tools = {
                'zip': [("unzip -o {filename}", "unzip -to {filename}")],
                '7z': []},
     'linux': {'exe': [('''7z x "{filename}" -o"{targetdir}"''', '''7z t "{filename}"''')],
-              'rar': [],
+              'rar': [('''7z x "{filename}" -o"{targetdir}"''', '''7z t "{filename}"''')],
               'zip': [('''7z x "{filename}" -o"{targetdir}"''', '''7z t "{filename}"''')],
               '7z' : [('''7z x "{filename}" -o"{targetdir}"''', '''7z t "{filename}"''')]},
     'linux2': {'exe': [('''7z x "{filename}" -o"{targetdir}"''', '''7z t "{filename}"''')],
-               'rar': [],
+               'rar': [('''7z x "{filename}" -o"{targetdir}"''', '''7z t "{filename}"''')],
                'zip': [('''7z x "{filename}" -o"{targetdir}"''', '''7z t "{filename}"''')],
                '7z' : [('''7z x "{filename}" -o"{targetdir}"''', '''7z t "{filename}"''')]}}
 

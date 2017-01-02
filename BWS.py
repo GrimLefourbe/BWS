@@ -148,9 +148,6 @@ class BWS:
             res.append(pop)
         return res
 
-
-
-
     def DeleteMods(self, ToDel, dldir=None):
         '''
         ModsToDel should be the list of index of the mods to delete from the download directory
@@ -347,7 +344,7 @@ class BWS:
         ID = moddict['ID']
         files = Utils.listsubdir(tmpdir)
 
-        tp2Pat = re.compile(r"(^/?(?:[^\r\n\t\f\v/]+?/)*?(?:setup-)?{}.tp2)$(?mi)".format(ID))
+        tp2Pat = re.compile(r"(^/?(?:[^\r\n\t\f\v/]+?/)*?(?:setup-)?({}).tp2)$(?mi)".format(ID))
         logging.info('tp2pat is {}'.format(tp2Pat))
         s = '\n'.join(files)
         tp2match = tp2Pat.search(s)
@@ -374,6 +371,9 @@ class BWS:
                 return 0
 
         tp2path = tp2match.group(1)
+        ActualID = tp2match.group(2)
+        if ActualID.lower() == ID.lower():
+            moddict['ID'] = ActualID
         logging.info("Found tp2 path {} : {}".format(ID, tp2path))
 
         if tp2path.split('/')[-2].lower() == ID.lower():

@@ -21,7 +21,7 @@ def ModList_old(filename):
 def ModList(filename):
     P = configparser.ConfigParser(interpolation=None)
     P.optionxform = lambda x: x
-    with open(filename) as f:
+    with open(filename, encoding='cp1252') as f:
         P.read_file(f)
     ModsData = []
     iterP = iter(P.values())
@@ -35,7 +35,7 @@ def ModList(filename):
 def ModComp(filename, ModsData=None):
     P = configparser.ConfigParser(interpolation=None)
     P.optionxform = lambda x: x
-    with open(filename) as f:
+    with open(filename, encoding='cp1252') as f:
         P.read_file(f)
 
     if ModsData is None:
