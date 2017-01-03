@@ -13,11 +13,6 @@ ModListPat=re.compile("\[(?P<ID>.*?)\]"
                "(?:\n *Tra=(?P<Tra>.*?))?"
                "(?:\n *Wiki=(?P<Wiki>.*?))?" "$", flags=re.MULTILINE)
 
-def ModList_old(filename):
-    with open(filename) as file:
-        ModsData = [match.groupdict() for match in ModListPat.finditer(file.read())]
-    return ModsData
-
 def ModList(filename):
     P = configparser.ConfigParser(interpolation=None)
     P.optionxform = lambda x: x
